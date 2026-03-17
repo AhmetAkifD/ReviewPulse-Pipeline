@@ -20,6 +20,7 @@ using System.Windows.Shapes;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using System.Threading;
+using OpenQA.Selenium.Support.UI;
 
 namespace ReviewHarvester
 {
@@ -85,12 +86,17 @@ namespace ReviewHarvester
 
                 // 1. Tarayıcıyı görünmez yapmak için bunu kullanırız. 
                 // EĞER hala engel yersen, bu satırı silip tarayıcının ekranda açılmasını sağla.
-                //options.AddArgument("--headless=new");
+                options.AddArgument("--headless=new");
 
                 // 2. Bot olduğumuzu gizleyen "Ninja" ayarları
                 options.AddArgument("--disable-blink-features=AutomationControlled");
                 options.AddExcludedArgument("enable-automation");
                 options.AddArgument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+
+                // HIZLANDIRICI (NİTRO) AYARLAR: Resimleri ve CSS'i yüklemeyi tamamen reddet!
+                options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.stylesheet", 2);
+                options.AddArgument("--disable-gpu"); // Grafik işlemciyi yormaya gerek yok
 
                 using (IWebDriver driver = new ChromeDriver(options))
                 {
@@ -109,6 +115,9 @@ namespace ReviewHarvester
                         // Botun Hafızası: Çektiğimiz yorumları buraya kaydedip mükerrer (kopya) veriyi engelleyeceğiz
                         HashSet<string> seenReviews = new HashSet<string>();
 
+                        // Akıllı Bekleme objemizi oluşturuyoruz (Maksimum 10 saniye bekler, veri gelirse anında devam eder)
+                        WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+
                         while (hasMoreReviews)
                         {
                             // Botumuz linki zorla değiştirip Enter'a basıyor
@@ -117,7 +126,22 @@ namespace ReviewHarvester
 
                             Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"Hasat: Sayfa {page} taranıyor...");
 
-                            Thread.Sleep(3000); // JSON'ın sayfaya gömülmesini bekle
+                            // YENİ HALİ: Sadece aradığımız JSON script'i DOM'a düşene kadar bekle, düştüğü an fırla!
+                            try
+                            {
+                                wait.Until(d =>
+                                {
+                                    var scripts = d.FindElements(By.XPath("//script[@type='application/ld+json']"));
+                                    // LINQ kullanarak içlerinden herhangi birinde "reviewBody" var mı diye bakıyoruz
+                                    return scripts.Any(s => s.GetAttribute("innerHTML").Contains("reviewBody"));
+                                });
+                            }
+                            catch (WebDriverTimeoutException)
+                            {
+                                // 10 saniye boyunca JSON gelmediyse sayfa boş demektir, döngüyü kır
+                                hasMoreReviews = false;
+                                continue;
+                            }
 
                             var scriptNodes = driver.FindElements(By.XPath("//script[@type='application/ld+json']"));
                             bool addedNewReviewInThisPage = false; // Bu sayfada yeni bir şey bulduk mu?
