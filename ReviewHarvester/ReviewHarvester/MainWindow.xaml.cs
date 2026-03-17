@@ -28,32 +28,25 @@ namespace ReviewHarvester
     /// </summary>
     public partial class MainWindow : Window
     {
+        public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
+
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = this; // LstReviews verileri görebilsin diye EKLENDİ
         }
-        public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
 
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Temel Girdi Kontrolleri
             if (string.IsNullOrWhiteSpace(TxtUrl.Text) || !Uri.IsWellFormedUriString(TxtUrl.Text, UriKind.Absolute))
             {
                 MessageBox.Show("Lütfen geçerli bir URL girin!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(TxtXPath.Text))
-            {
-                MessageBox.Show("XPath alanı boş bırakılamaz!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // 2. Hazırlık
             string url = TxtUrl.Text;
-            string xpath = TxtXPath.Text;
 
-            HarvestedReviews.Clear(); // Yeni hasat öncesi listeyi temizle
+            HarvestedReviews.Clear();
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
             PrgStatus.IsIndeterminate = true;
@@ -61,12 +54,12 @@ namespace ReviewHarvester
 
             try
             {
-                int count = await Task.Run(() => StartScraping(url));
+                int count = await StartScraping(url); // await eklendi
 
                 if (count > 0)
                     TxtStatus.Text = $"Başarılı! {count} adet yorum toplandı.";
                 else
-                    TxtStatus.Text = "Eşleşme bulunamadı. XPath'i kontrol edin.";
+                    TxtStatus.Text = "Hiç yorum bulunamadı.";
             }
             catch (Exception ex)
             {
@@ -227,6 +220,12 @@ namespace ReviewHarvester
             {
                 MessageBox.Show("Dosya başka bir program (örn: Excel) tarafından kullanılıyor. Lütfen kapatıp tekrar deneyin.", "Dosya Hatası", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnCsvManager_Click(object sender, RoutedEventArgs e)
+        {
+            CsvManagerWindow csvWindow = new CsvManagerWindow();
+            csvWindow.ShowDialog(); // Yeni pencereyi aç
         }
     }
 }
