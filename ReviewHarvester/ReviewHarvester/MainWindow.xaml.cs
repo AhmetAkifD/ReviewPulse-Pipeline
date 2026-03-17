@@ -103,59 +103,82 @@ namespace ReviewHarvester
                 {
                     try
                     {
-                        // Sayfayı aç (Sitenin normal açıldığını gördük, yani 403 engeli yok)
-                        driver.Navigate().GoToUrl(url);
-                        Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = "Sayfa yüklendi, SEO verileri (JSON) aranıyor...");
-
-                        // Sitenin arka planda verileri yerleştirmesi için kısa bir bekleme
-                        Thread.Sleep(3000);
-
-                        // Yeni Python projesindeki taktiği kullanıyoruz: Gizli JSON script'ini bul
-                        var scriptNodes = driver.FindElements(By.XPath("//script[@type='application/ld+json']"));
-
-                        foreach (var node in scriptNodes)
+                        // URL'yi temizleyip yorumlar formatına getiriyoruz
+                        string baseUrl = url.Split('?')[0];
+                        if (!baseUrl.EndsWith("-yorumlari"))
                         {
-                            // Script etiketinin içindeki metni (JSON) alıyoruz
-                            string jsonText = node.GetAttribute("innerHTML");
+                            baseUrl += "-yorumlari";
+                        }
 
-                            // Eğer içinde 'reviewBody' yoksa bu başka bir SEO verisidir, atla
-                            if (string.IsNullOrEmpty(jsonText) || !jsonText.Contains("reviewBody")) continue;
+                        int page = 1;
+                        bool hasMoreReviews = true;
 
-                            try
+                        // Botun Hafızası: Çektiğimiz yorumları buraya kaydedip mükerrer (kopya) veriyi engelleyeceğiz
+                        HashSet<string> seenReviews = new HashSet<string>();
+
+                        while (hasMoreReviews)
+                        {
+                            // Botumuz linki zorla değiştirip Enter'a basıyor
+                            string pageUrl = $"{baseUrl}?sayfa={page}";
+                            driver.Navigate().GoToUrl(pageUrl);
+
+                            Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"Hasat: Sayfa {page} taranıyor...");
+
+                            Thread.Sleep(3000); // JSON'ın sayfaya gömülmesini bekle
+
+                            var scriptNodes = driver.FindElements(By.XPath("//script[@type='application/ld+json']"));
+                            bool addedNewReviewInThisPage = false; // Bu sayfada yeni bir şey bulduk mu?
+
+                            foreach (var node in scriptNodes)
                             {
-                                // Newtonsoft.Json ile veriyi parçala
-                                dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonText);
+                                string jsonText = node.GetAttribute("innerHTML");
+                                if (string.IsNullOrEmpty(jsonText) || !jsonText.Contains("reviewBody")) continue;
 
-                                // Python kodunda verinin liste (array) olduğu kontrol edilmiş, biz de aynısını yapıyoruz
-                                if (data is Newtonsoft.Json.Linq.JArray)
+                                try
                                 {
-                                    foreach (var review in data)
+                                    dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonText);
+                                    if (data is Newtonsoft.Json.Linq.JArray)
                                     {
-                                        // reviewBody anahtarıyla yorum metnini çekiyoruz
-                                        string reviewText = review["reviewBody"]?.ToString();
-                                        if (string.IsNullOrWhiteSpace(reviewText)) continue;
-
-                                        // reviewRating altından yıldız puanını alıyoruz
-                                        int star = review["reviewRating"]?["ratingValue"] != null ? (int)review["reviewRating"]["ratingValue"] : 5;
-
-                                        Application.Current.Dispatcher.Invoke(() =>
+                                        foreach (var review in data)
                                         {
-                                            HarvestedReviews.Add(new Review
+                                            string reviewText = review["reviewBody"]?.ToString().Replace('\n', ' ').Trim();
+                                            if (string.IsNullOrWhiteSpace(reviewText)) continue;
+
+                                            // HAFIZA KONTROLÜ: Bu yorumu daha önce çektik mi?
+                                            if (seenReviews.Contains(reviewText)) continue;
+
+                                            // Yeni yorumsa hafızaya ve listeye ekle
+                                            seenReviews.Add(reviewText);
+                                            addedNewReviewInThisPage = true;
+
+                                            int star = review["reviewRating"]?["ratingValue"] != null ? (int)review["reviewRating"]["ratingValue"] : 5;
+
+                                            Application.Current.Dispatcher.Invoke(() =>
                                             {
-                                                User = "Hepsiburada Kullanıcısı",
-                                                Comment = reviewText.Replace('\n', ' ').Trim(), // Satır atlamalarını temizle
-                                                Rating = star,
-                                                Source = "Hepsiburada"
+                                                HarvestedReviews.Add(new Review
+                                                {
+                                                    User = "Anonim",
+                                                    Comment = reviewText,
+                                                    Rating = star,
+                                                    Source = "Hepsiburada"
+                                                });
                                             });
-                                        });
-                                        count++;
+                                            count++;
+                                        }
                                     }
                                 }
+                                catch (Exception) { continue; }
                             }
-                            catch (Exception)
+
+                            // Eğer bu sayfada hiç "yeni" yorum bulamadıysak (demek ki son sayfaya geldik veya site başa sardı)
+                            if (!addedNewReviewInThisPage)
                             {
-                                // JSON dönüştürme hatası olursa diğer script'e geç
-                                continue;
+                                hasMoreReviews = false;
+                                Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"Hasat kusursuz bitti! Toplam {count} benzersiz yorum çekildi.");
+                            }
+                            else
+                            {
+                                page++; // Yeni yorumlar bulduysak diğer sayfaya geç
                             }
                         }
                     }
