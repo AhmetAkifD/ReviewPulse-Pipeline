@@ -18,8 +18,16 @@
             <TextBlock Text="ReviewHarvester - Bağlantı Ayarları" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
             <Grid Margin="0,0,0,10">
-                <TextBox x:Name="TxtUrl" Padding="8" FontSize="14" VerticalContentAlignment="Center"/>
-                <TextBlock IsHitTestVisible="False" Text="Ürün veya Yorum Sayfası URL'si..." VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" Foreground="DarkGray">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" x:Name="BtnLoadTxt" Content="TXT Dosyası Seç" Width="140" Height="35" Click="BtnLoadTxt_Click" Background="#8e44ad" Foreground="White" FontWeight="Bold" Margin="0,0,10,0"/>
+
+                <TextBox Grid.Column="1" x:Name="TxtUrl" Padding="8" FontSize="14" VerticalContentAlignment="Center"/>
+
+                <TextBlock Grid.Column="1" IsHitTestVisible="False" Text="Tek ürün linki girin veya soldaki butondan TXT yükleyin..." VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" Foreground="DarkGray">
                     <TextBlock.Style>
                         <Style TargetType="{x:Type TextBlock}">
                             <Setter Property="Visibility" Value="Collapsed"/>

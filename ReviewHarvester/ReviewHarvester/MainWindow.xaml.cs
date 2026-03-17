@@ -30,6 +30,7 @@ namespace ReviewHarvester
     public partial class MainWindow : Window
     {
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
+        private List<string> _targetUrls = new List<string>();
 
         public MainWindow()
         {
@@ -39,39 +40,60 @@ namespace ReviewHarvester
 
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(TxtUrl.Text) || !Uri.IsWellFormedUriString(TxtUrl.Text, UriKind.Absolute))
+            // Eğer TXT yüklenmemişse ama Textbox'a elle bir link girilmişse, onu listeye ekle
+            if (_targetUrls.Count == 0 && !string.IsNullOrWhiteSpace(TxtUrl.Text))
             {
-                MessageBox.Show("Lütfen geçerli bir URL girin!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                _targetUrls.Add(TxtUrl.Text.Trim());
             }
 
-            string url = TxtUrl.Text;
+            if (_targetUrls.Count == 0)
+            {
+                MessageBox.Show("Lütfen bir URL girin veya TXT dosyası seçin!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             HarvestedReviews.Clear();
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
-            PrgStatus.IsIndeterminate = true;
-            TxtStatus.Text = "Veriler toplanıyor, lütfen bekleyin...";
+            BtnCsvManager.IsEnabled = false;
+            BtnLoadTxt.IsEnabled = false;
+
+            int totalCollectedCount = 0;
 
             try
             {
-                int count = await StartScraping(url); // await eklendi
+                for (int i = 0; i < _targetUrls.Count; i++)
+                {
+                    string currentUrl = _targetUrls[i];
+                    if (!Uri.IsWellFormedUriString(currentUrl, UriKind.Absolute)) continue;
 
-                if (count > 0)
-                    TxtStatus.Text = $"Başarılı! {count} adet yorum toplandı.";
-                else
-                    TxtStatus.Text = "Hiç yorum bulunamadı.";
+                    // İŞTE BURASI: Sıradaki linki Textbox'a yapıştırıyoruz!
+                    TxtUrl.Text = currentUrl;
+
+                    TxtStatus.Text = $"Görev {i + 1}/{_targetUrls.Count} işleniyor... Toplanan: {totalCollectedCount}";
+                    PrgStatus.IsIndeterminate = true;
+
+                    int countFromThisUrl = await Task.Run(() => StartScraping(currentUrl));
+                    totalCollectedCount += countFromThisUrl;
+                }
+
+                TxtStatus.Text = $"Tüm görevler bitti! Toplam {totalCollectedCount} yorum hasat edildi.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Bağlantı hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
-                TxtStatus.Text = "Hata oluştu.";
+                MessageBox.Show($"Otomasyon sırasında hata: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                TxtStatus.Text = "Görev iptal edildi.";
             }
             finally
             {
                 BtnStart.IsEnabled = true;
                 BtnSave.IsEnabled = true;
+                BtnCsvManager.IsEnabled = true;
+                BtnLoadTxt.IsEnabled = true;
                 PrgStatus.IsIndeterminate = false;
+
+                // İşlem bitince listeyi temizle ki, sonradan elle yeni bir link girildiğinde eskilere tekrar girmesin
+                _targetUrls.Clear();
             }
         }
 
@@ -250,6 +272,31 @@ namespace ReviewHarvester
         {
             CsvManagerWindow csvWindow = new CsvManagerWindow();
             csvWindow.ShowDialog(); // Yeni pencereyi aç
+        }
+
+        private void BtnLoadTxt_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "Metin Dosyaları (*.txt)|*.txt",
+                Title = "Linklerin Bulunduğu Dosyayı Seçin"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                // Dosyadaki linkleri temizleyip listeye alıyoruz
+                _targetUrls = File.ReadAllLines(openFileDialog.FileName)
+                                  .Where(line => !string.IsNullOrWhiteSpace(line))
+                                  .Select(line => line.Trim())
+                                  .ToList();
+
+                if (_targetUrls.Count > 0)
+                {
+                    // Kullanıcının isteği: Dosya seçilir seçilmez sistemi otomatik başlat!
+                    // Butona basılmış gibi Start metodunu tetikliyoruz.
+                    BtnStart_Click(null, null);
+                }
+            }
         }
     }
 }
