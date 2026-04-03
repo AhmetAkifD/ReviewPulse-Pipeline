@@ -158,22 +158,55 @@
                     </Grid>
                 </StackPanel>
 
-                <Grid Grid.Row="1" Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <StackPanel Grid.Row="1" Margin="0,0,0,20">
 
-                    <Button x:Name="BtnStart" Content="Hasadı Başlat" Width="140" Height="40" 
-                            Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}"/>
+                    <TextBlock Text="Filtre Seçenekleri (Hasat Edilecek Puanlar)" 
+                       Foreground="{DynamicResource TextBrush}" 
+                       FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                    <ProgressBar Grid.Column="1" x:Name="PrgStatus" Height="8" Margin="20,0" VerticalAlignment="Center" 
-                                 Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="2" x:Name="BtnSave" Content="CSV Kaydet" Width="140" Height="40" 
-                            Click="BtnSave_Click" Background="{DynamicResource AccentBrush}"/>
-                </Grid>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <CheckBox x:Name="Chk1" Content="1 ⭐" IsChecked="True" Foreground="{DynamicResource TextBrush}" Margin="0,0,15,0"/>
+                            <CheckBox x:Name="Chk2" Content="2 ⭐" IsChecked="True" Foreground="{DynamicResource TextBrush}" Margin="0,0,15,0"/>
+                            <CheckBox x:Name="Chk3" Content="3 ⭐" IsChecked="True" Foreground="{DynamicResource TextBrush}" Margin="0,0,15,0"/>
+                            <CheckBox x:Name="Chk4" Content="4 ⭐" IsChecked="True" Foreground="{DynamicResource TextBrush}" Margin="0,0,15,0"/>
+                            <CheckBox x:Name="Chk5" Content="5 ⭐" IsChecked="True" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <Button Content="Sadece Olumsuzlar" Click="BtnSelectNegative_Click" 
+                            Width="140" Height="30" Margin="0,0,10,0"
+                            Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource PrimaryBrush}" FontSize="12"/>
+                            <Button Content="Sadece Olumlular" Click="BtnSelectPositive_Click" 
+                            Width="140" Height="30"
+                            Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource PrimaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnStart" Content="Hasadı Başlat" Width="140" Height="40" 
+                        Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}"/>
+
+                        <ProgressBar Grid.Column="1" x:Name="PrgStatus" Height="8" Margin="20,0" VerticalAlignment="Center" 
+                             Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>
+
+                        <Button Grid.Column="2" x:Name="BtnSave" Content="CSV Kaydet" Width="140" Height="40" 
+                        Click="BtnSave_Click" Background="{DynamicResource AccentBrush}"/>
+                    </Grid>
+
+                </StackPanel>
 
                 <ListView Grid.Row="2" x:Name="LstReviews" ItemsSource="{Binding HarvestedReviews}" Background="Transparent" BorderThickness="0">
                     <ListView.View>

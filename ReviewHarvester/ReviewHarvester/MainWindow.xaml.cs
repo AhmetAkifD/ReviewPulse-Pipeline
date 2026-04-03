@@ -1,22 +1,18 @@
 ﻿using CsvHelper;
-using HtmlAgilityPack;
+using HtmlAgilityPack; // HTML parsing için (Gelecekte gerekebilir)
 using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Linq; // LINQ işlemleri için kritik
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using System.Threading;
@@ -24,24 +20,94 @@ using OpenQA.Selenium.Support.UI;
 
 namespace ReviewHarvester
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
         private List<string> _targetUrls = new List<string>();
-        private bool _isDarkTheme = true; // Varsayılan olarak karanlık başlıyoruz
+
+        // Tema takibi için değişken
+        private bool _isDarkTheme = true;
 
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = this; // LstReviews verileri görebilsin diye EKLENDİ
+            DataContext = this;
         }
 
+        // ==========================================
+        // 1. SIDEBAR MENÜ VE NAVİGASYON (SPA MANTIĞI)
+        // ==========================================
+        private void BtnNavScraper_Click(object sender, RoutedEventArgs e)
+        {
+            PageScraper.Visibility = Visibility.Visible;
+            PageCsvManager.Visibility = Visibility.Collapsed;
+
+            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
+            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["TextBrush"];
+        }
+
+        private void BtnNavCsv_Click(object sender, RoutedEventArgs e)
+        {
+            PageScraper.Visibility = Visibility.Collapsed;
+            PageCsvManager.Visibility = Visibility.Visible;
+
+            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
+            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["TextBrush"];
+        }
+
+        // ==========================================
+        // 2. TEMA SİSTEMİ
+        // ==========================================
+        private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _isDarkTheme = !_isDarkTheme;
+
+            string themeFile = _isDarkTheme ? "DarkTheme.xaml" : "LightTheme.xaml";
+
+            var oldTheme = Application.Current.Resources.MergedDictionaries
+                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Theme.xaml"));
+
+            if (oldTheme != null)
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(oldTheme);
+            }
+
+            ResourceDictionary newTheme = new ResourceDictionary
+            {
+                Source = new Uri($"Themes/{themeFile}", UriKind.Relative)
+            };
+            Application.Current.Resources.MergedDictionaries.Add(newTheme);
+
+            if (_isDarkTheme)
+            {
+                TxtThemeIcon.Text = "🌙";
+            }
+            else
+            {
+                TxtThemeIcon.Text = "☀";
+            }
+        }
+
+        // ==========================================
+        // 3. FİLTRELEME HIZLI SEÇİM BUTONLARI
+        // ==========================================
+        private void BtnSelectNegative_Click(object sender, RoutedEventArgs e)
+        {
+            Chk1.IsChecked = Chk2.IsChecked = Chk3.IsChecked = true;
+            Chk4.IsChecked = Chk5.IsChecked = false;
+        }
+
+        private void BtnSelectPositive_Click(object sender, RoutedEventArgs e)
+        {
+            Chk1.IsChecked = Chk2.IsChecked = Chk3.IsChecked = false;
+            Chk4.IsChecked = Chk5.IsChecked = true;
+        }
+
+        // ==========================================
+        // 4. HASAT BAŞLATMA VE ARAYÜZ KONTROLÜ
+        // ==========================================
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            // Eğer TXT yüklenmemişse ama Textbox'a elle bir link girilmişse, onu listeye ekle
             if (_targetUrls.Count == 0 && !string.IsNullOrWhiteSpace(TxtUrl.Text))
             {
                 _targetUrls.Add(TxtUrl.Text.Trim());
@@ -54,9 +120,12 @@ namespace ReviewHarvester
             }
 
             HarvestedReviews.Clear();
+
+            // Tüm kontrolleri işlem sırasında kilitliyoruz
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
             BtnLoadTxt.IsEnabled = false;
+            BtnThemeToggle.IsEnabled = false;
 
             int totalCollectedCount = 0;
 
@@ -67,13 +136,11 @@ namespace ReviewHarvester
                     string currentUrl = _targetUrls[i];
                     if (!Uri.IsWellFormedUriString(currentUrl, UriKind.Absolute)) continue;
 
-                    // İŞTE BURASI: Sıradaki linki Textbox'a yapıştırıyoruz!
                     TxtUrl.Text = currentUrl;
-
                     TxtStatus.Text = $"Görev {i + 1}/{_targetUrls.Count} işleniyor... Toplanan: {totalCollectedCount}";
                     PrgStatus.IsIndeterminate = true;
 
-                    int countFromThisUrl = await Task.Run(() => StartScraping(currentUrl));
+                    int countFromThisUrl = await StartScraping(currentUrl); // Task.Run StartScraping içinde zaten var.
                     totalCollectedCount += countFromThisUrl;
                 }
 
@@ -89,17 +156,132 @@ namespace ReviewHarvester
                 BtnStart.IsEnabled = true;
                 BtnSave.IsEnabled = true;
                 BtnLoadTxt.IsEnabled = true;
+                BtnThemeToggle.IsEnabled = true;
                 PrgStatus.IsIndeterminate = false;
-
-                // İşlem bitince listeyi temizle ki, sonradan elle yeni bir link girildiğinde eskilere tekrar girmesin
                 _targetUrls.Clear();
+            }
+        }
+
+        private void BtnLoadTxt_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "Metin Dosyaları (*.txt)|*.txt",
+                Title = "Linklerin Bulunduğu Dosyayı Seçin"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                _targetUrls = File.ReadAllLines(openFileDialog.FileName)
+                                  .Where(line => !string.IsNullOrWhiteSpace(line))
+                                  .Select(line => line.Trim())
+                                  .ToList();
+
+                if (_targetUrls.Count > 0)
+                {
+                    BtnStart_Click(null, null);
+                }
+            }
+        }
+
+        private void BtnSave_Click(object sender, RoutedEventArgs e)
+        {
+            if (HarvestedReviews.Count == 0)
+            {
+                MessageBox.Show("Kaydedilecek veri bulunamadı. Önce hasat yapmalısınız!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV dosyası (*.csv)|*.csv",
+                FileName = "reviews_data.csv"
+            };
+
+            try
+            {
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    using (var writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                    {
+                        csv.WriteRecords(HarvestedReviews);
+                    }
+                    MessageBox.Show("Veriler başarıyla CSV formatına dönüştürüldü!", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (IOException)
+            {
+                MessageBox.Show("Dosya başka bir program (örn: Excel) tarafından kullanılıyor. Lütfen kapatıp tekrar deneyin.", "Dosya Hatası", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ==========================================
+        // 5. CSV YÖNETİCİSİ (BİRLEŞTİRME MOTORU)
+        // ==========================================
+        private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "CSV Dosyaları (*.csv)|*.csv",
+                Title = "Birleştirilecek CSV Dosyalarını Seçin",
+                Multiselect = true
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string[] selectedFiles = openFileDialog.FileNames;
+
+                if (selectedFiles.Length < 2)
+                {
+                    MessageBox.Show("Birleştirme işlemi için en az 2 adet CSV dosyası seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    Filter = "CSV Dosyası (*.csv)|*.csv",
+                    Title = "Birleştirilmiş Master Dosyayı Kaydet",
+                    FileName = "Master_Reviews_Dataset.csv"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    try
+                    {
+                        using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                        {
+                            for (int i = 0; i < selectedFiles.Length; i++)
+                            {
+                                string[] lines = File.ReadAllLines(selectedFiles[i]);
+                                int startLine = (i == 0) ? 0 : 1;
+
+                                for (int j = startLine; j < lines.Length; j++)
+                                {
+                                    writer.WriteLine(lines[j]);
+                                }
+                            }
+                        }
+
+                        MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla tek bir dosyada birleştirildi!\n\nKonum: {saveFileDialog.FileName}",
+                                        "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Dosyalar birleştirilirken bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
             }
         }
 
         private async Task<int> StartScraping(string url)
         {
             int count = 0;
-
+            bool allow1 = Chk1.IsChecked == true;
+            bool allow2 = Chk2.IsChecked == true;
+            bool allow3 = Chk3.IsChecked == true;
+            bool allow4 = Chk4.IsChecked == true;
+            bool allow5 = Chk5.IsChecked == true;
             // Arka planda çalışması için Task.Run içine alıyoruz ki UI donmasın
             await Task.Run(() =>
             {
@@ -190,8 +372,17 @@ namespace ReviewHarvester
                                             // Puanı alıyoruz
                                             int star = review["reviewRating"]?["ratingValue"] != null ? (int)review["reviewRating"]["ratingValue"] : 5;
 
-                                            // İŞTE YENİ FİLTREMİZ: Eğer puan 3'ten büyükse (4 veya 5 ise) bu yorumu atla ve listeye ekleme!
-                                            if (star > 3) continue;
+                                            // --- İŞTE YENİ DİNAMİK FİLTREMİZ ---
+                                            bool isAllowed = false;
+                                            if (star == 1 && allow1) isAllowed = true;
+                                            else if (star == 2 && allow2) isAllowed = true;
+                                            else if (star == 3 && allow3) isAllowed = true;
+                                            else if (star == 4 && allow4) isAllowed = true;
+                                            else if (star == 5 && allow5) isAllowed = true;
+
+                                            // Eğer puan, arayüzdeki CheckBox'larda seçili değilse bu yorumu UI'a ekleme, pas geç!
+                                            if (!isAllowed) continue;
+                                            // ----------------------------------
 
                                             Application.Current.Dispatcher.Invoke(() =>
                                             {
@@ -199,7 +390,7 @@ namespace ReviewHarvester
                                                 {
                                                     User = "Anonim",
                                                     Comment = reviewText,
-                                                    Rating = star, // Sadece 1, 2 ve 3 yıldızlar buraya ulaşabilecek
+                                                    Rating = star,
                                                     Source = "Hepsiburada"
                                                 });
                                             });
@@ -235,186 +426,6 @@ namespace ReviewHarvester
             });
 
             return count;
-        }
-
-        private void BtnSave_Click(object sender, RoutedEventArgs e)
-        {
-            if (HarvestedReviews.Count == 0)
-            {
-                MessageBox.Show("Kaydedilecek veri bulunamadı. Önce hasat yapmalısınız!", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            SaveFileDialog saveFileDialog = new SaveFileDialog
-            {
-                Filter = "CSV dosyası (*.csv)|*.csv",
-                FileName = "reviews_data.csv"
-            };
-
-            try
-            {
-                if (saveFileDialog.ShowDialog() == true)
-                {
-                    using (var writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
-                    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                    {
-                        csv.WriteRecords(HarvestedReviews);
-                    }
-                    MessageBox.Show("Veriler başarıyla CSV formatına dönüştürüldü!", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-            }
-            catch (IOException)
-            {
-                MessageBox.Show("Dosya başka bir program (örn: Excel) tarafından kullanılıyor. Lütfen kapatıp tekrar deneyin.", "Dosya Hatası", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void BtnCsvManager_Click(object sender, RoutedEventArgs e)
-        {
-            CsvManagerWindow csvWindow = new CsvManagerWindow();
-            csvWindow.ShowDialog(); // Yeni pencereyi aç
-        }
-
-        private void BtnLoadTxt_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog
-            {
-                Filter = "Metin Dosyaları (*.txt)|*.txt",
-                Title = "Linklerin Bulunduğu Dosyayı Seçin"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                // Dosyadaki linkleri temizleyip listeye alıyoruz
-                _targetUrls = File.ReadAllLines(openFileDialog.FileName)
-                                  .Where(line => !string.IsNullOrWhiteSpace(line))
-                                  .Select(line => line.Trim())
-                                  .ToList();
-
-                if (_targetUrls.Count > 0)
-                {
-                    // Kullanıcının isteği: Dosya seçilir seçilmez sistemi otomatik başlat!
-                    // Butona basılmış gibi Start metodunu tetikliyoruz.
-                    BtnStart_Click(null, null);
-                }
-            }
-        }
-
-        private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
-        {
-            _isDarkTheme = !_isDarkTheme; // Durumu tersine çevir
-
-            // 1. Yeni tema dosyasının adını belirle
-            string themeFile = _isDarkTheme ? "DarkTheme.xaml" : "LightTheme.xaml";
-
-            // 2. Uygulama kaynaklarındaki (MergedDictionaries) eski temayı bul ve sil
-            var oldTheme = Application.Current.Resources.MergedDictionaries
-                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Theme.xaml"));
-
-            if (oldTheme != null)
-            {
-                Application.Current.Resources.MergedDictionaries.Remove(oldTheme);
-            }
-
-            // 3. Yeni temayı ekle
-            ResourceDictionary newTheme = new ResourceDictionary
-            {
-                Source = new Uri($"Themes/{themeFile}", UriKind.Relative)
-            };
-            Application.Current.Resources.MergedDictionaries.Add(newTheme);
-
-            // 4. Butonun üzerindeki yazıyı ve ikonu güncelle
-            if (_isDarkTheme)
-            {
-                TxtThemeIcon.Text = "🌙";
-            }
-            else
-            {
-                TxtThemeIcon.Text = "☀";
-            }
-        }
-
-        // Sidebar - Hasat Merkezi Butonu Tıklanınca
-        private void BtnNavScraper_Click(object sender, RoutedEventArgs e)
-        {
-            PageScraper.Visibility = Visibility.Visible;
-            PageCsvManager.Visibility = Visibility.Collapsed;
-
-            // Aktif sayfa hissiyatı için buton renklerini ayarlayabiliriz
-            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
-            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["TextBrush"];
-        }
-
-        // Sidebar - CSV Yöneticisi Butonu Tıklanınca
-        private void BtnNavCsv_Click(object sender, RoutedEventArgs e)
-        {
-            PageScraper.Visibility = Visibility.Collapsed;
-            PageCsvManager.Visibility = Visibility.Visible;
-
-            // Aktif sayfa hissiyatı
-            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
-            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["TextBrush"];
-        }
-
-        private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
-        {
-            // 1. Birleştirilecek dosyaları seçtirme (Multiselect aktif!)
-            OpenFileDialog openFileDialog = new OpenFileDialog
-            {
-                Filter = "CSV Dosyaları (*.csv)|*.csv",
-                Title = "Birleştirilecek CSV Dosyalarını Seçin",
-                Multiselect = true
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                string[] selectedFiles = openFileDialog.FileNames;
-
-                // Kullanıcı yanlışlıkla tek dosya seçtiyse uyar
-                if (selectedFiles.Length < 2)
-                {
-                    MessageBox.Show("Birleştirme işlemi için en az 2 adet CSV dosyası seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // 2. Birleştirilmiş yeni dosyanın nereye kaydedileceğini sorma
-                SaveFileDialog saveFileDialog = new SaveFileDialog
-                {
-                    Filter = "CSV Dosyası (*.csv)|*.csv",
-                    Title = "Birleştirilmiş Master Dosyayı Kaydet",
-                    FileName = "Master_Reviews_Dataset.csv"
-                };
-
-                if (saveFileDialog.ShowDialog() == true)
-                {
-                    try
-                    {
-                        // Dosyaları okuyup yeni dosyaya yazma işlemi
-                        using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
-                        {
-                            for (int i = 0; i < selectedFiles.Length; i++)
-                            {
-                                string[] lines = File.ReadAllLines(selectedFiles[i]);
-
-                                // KRİTİK NOKTA: İlk dosya değilse, ilk satırı (Başlıklar: User,Rating,Comment) atla ki araya karışmasın
-                                int startLine = (i == 0) ? 0 : 1;
-
-                                for (int j = startLine; j < lines.Length; j++)
-                                {
-                                    writer.WriteLine(lines[j]);
-                                }
-                            }
-                        }
-
-                        MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla tek bir dosyada birleştirildi!\n\nKonum: {saveFileDialog.FileName}",
-                                        "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Dosyalar birleştirilirken bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            }
         }
     }
 }
