@@ -56,7 +56,6 @@ namespace ReviewHarvester
             HarvestedReviews.Clear();
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
-            BtnCsvManager.IsEnabled = false;
             BtnLoadTxt.IsEnabled = false;
 
             int totalCollectedCount = 0;
@@ -89,7 +88,6 @@ namespace ReviewHarvester
             {
                 BtnStart.IsEnabled = true;
                 BtnSave.IsEnabled = true;
-                BtnCsvManager.IsEnabled = true;
                 BtnLoadTxt.IsEnabled = true;
                 PrgStatus.IsIndeterminate = false;
 
@@ -333,6 +331,89 @@ namespace ReviewHarvester
             else
             {
                 TxtThemeIcon.Text = "☀";
+            }
+        }
+
+        // Sidebar - Hasat Merkezi Butonu Tıklanınca
+        private void BtnNavScraper_Click(object sender, RoutedEventArgs e)
+        {
+            PageScraper.Visibility = Visibility.Visible;
+            PageCsvManager.Visibility = Visibility.Collapsed;
+
+            // Aktif sayfa hissiyatı için buton renklerini ayarlayabiliriz
+            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
+            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["TextBrush"];
+        }
+
+        // Sidebar - CSV Yöneticisi Butonu Tıklanınca
+        private void BtnNavCsv_Click(object sender, RoutedEventArgs e)
+        {
+            PageScraper.Visibility = Visibility.Collapsed;
+            PageCsvManager.Visibility = Visibility.Visible;
+
+            // Aktif sayfa hissiyatı
+            BtnNavCsv.Foreground = (Brush)Application.Current.Resources["SecondaryBrush"];
+            BtnNavScraper.Foreground = (Brush)Application.Current.Resources["TextBrush"];
+        }
+
+        private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
+        {
+            // 1. Birleştirilecek dosyaları seçtirme (Multiselect aktif!)
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "CSV Dosyaları (*.csv)|*.csv",
+                Title = "Birleştirilecek CSV Dosyalarını Seçin",
+                Multiselect = true
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string[] selectedFiles = openFileDialog.FileNames;
+
+                // Kullanıcı yanlışlıkla tek dosya seçtiyse uyar
+                if (selectedFiles.Length < 2)
+                {
+                    MessageBox.Show("Birleştirme işlemi için en az 2 adet CSV dosyası seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 2. Birleştirilmiş yeni dosyanın nereye kaydedileceğini sorma
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    Filter = "CSV Dosyası (*.csv)|*.csv",
+                    Title = "Birleştirilmiş Master Dosyayı Kaydet",
+                    FileName = "Master_Reviews_Dataset.csv"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    try
+                    {
+                        // Dosyaları okuyup yeni dosyaya yazma işlemi
+                        using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                        {
+                            for (int i = 0; i < selectedFiles.Length; i++)
+                            {
+                                string[] lines = File.ReadAllLines(selectedFiles[i]);
+
+                                // KRİTİK NOKTA: İlk dosya değilse, ilk satırı (Başlıklar: User,Rating,Comment) atla ki araya karışmasın
+                                int startLine = (i == 0) ? 0 : 1;
+
+                                for (int j = startLine; j < lines.Length; j++)
+                                {
+                                    writer.WriteLine(lines[j]);
+                                }
+                            }
+                        }
+
+                        MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla tek bir dosyada birleştirildi!\n\nKonum: {saveFileDialog.FileName}",
+                                        "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Dosyalar birleştirilirken bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
             }
         }
     }
