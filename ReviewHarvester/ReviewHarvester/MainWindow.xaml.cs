@@ -31,6 +31,7 @@ namespace ReviewHarvester
     {
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
         private List<string> _targetUrls = new List<string>();
+        private bool _isDarkTheme = true; // Varsayılan olarak karanlık başlıyoruz
 
         public MainWindow()
         {
@@ -183,14 +184,16 @@ namespace ReviewHarvester
                                             string reviewText = review["reviewBody"]?.ToString().Replace('\n', ' ').Trim();
                                             if (string.IsNullOrWhiteSpace(reviewText)) continue;
 
-                                            // HAFIZA KONTROLÜ: Bu yorumu daha önce çektik mi?
                                             if (seenReviews.Contains(reviewText)) continue;
 
-                                            // Yeni yorumsa hafızaya ve listeye ekle
                                             seenReviews.Add(reviewText);
                                             addedNewReviewInThisPage = true;
 
+                                            // Puanı alıyoruz
                                             int star = review["reviewRating"]?["ratingValue"] != null ? (int)review["reviewRating"]["ratingValue"] : 5;
+
+                                            // İŞTE YENİ FİLTREMİZ: Eğer puan 3'ten büyükse (4 veya 5 ise) bu yorumu atla ve listeye ekleme!
+                                            if (star > 3) continue;
 
                                             Application.Current.Dispatcher.Invoke(() =>
                                             {
@@ -198,7 +201,7 @@ namespace ReviewHarvester
                                                 {
                                                     User = "Anonim",
                                                     Comment = reviewText,
-                                                    Rating = star,
+                                                    Rating = star, // Sadece 1, 2 ve 3 yıldızlar buraya ulaşabilecek
                                                     Source = "Hepsiburada"
                                                 });
                                             });
@@ -296,6 +299,40 @@ namespace ReviewHarvester
                     // Butona basılmış gibi Start metodunu tetikliyoruz.
                     BtnStart_Click(null, null);
                 }
+            }
+        }
+
+        private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _isDarkTheme = !_isDarkTheme; // Durumu tersine çevir
+
+            // 1. Yeni tema dosyasının adını belirle
+            string themeFile = _isDarkTheme ? "DarkTheme.xaml" : "LightTheme.xaml";
+
+            // 2. Uygulama kaynaklarındaki (MergedDictionaries) eski temayı bul ve sil
+            var oldTheme = Application.Current.Resources.MergedDictionaries
+                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Theme.xaml"));
+
+            if (oldTheme != null)
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(oldTheme);
+            }
+
+            // 3. Yeni temayı ekle
+            ResourceDictionary newTheme = new ResourceDictionary
+            {
+                Source = new Uri($"Themes/{themeFile}", UriKind.Relative)
+            };
+            Application.Current.Resources.MergedDictionaries.Add(newTheme);
+
+            // 4. Butonun üzerindeki yazıyı ve ikonu güncelle
+            if (_isDarkTheme)
+            {
+                TxtThemeIcon.Text = "🌙";
+            }
+            else
+            {
+                TxtThemeIcon.Text = "☀";
             }
         }
     }

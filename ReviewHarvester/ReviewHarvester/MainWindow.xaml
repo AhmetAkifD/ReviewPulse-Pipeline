@@ -5,8 +5,66 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ReviewHarvester"
         mc:Ignorable="d"
-        Title="ReviewHarvester - Hasat Merkezi" Height="500" Width="850">
-    <Grid Margin="20">
+        Title="ReviewHarvester - Hasat Merkezi" Height="500" Width="850"
+        Background="{DynamicResource PrimaryBrush}">
+
+    <Grid Margin="25">
+        <Grid.Resources>
+            <Style TargetType="{x:Type GridViewColumnHeader}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Padding" Value="5,8"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SecondaryBrush}"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            </Style>
+
+            <Style TargetType="{x:Type ListViewItem}">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ListViewItem}">
+                            <Border x:Name="Bd" CornerRadius="5" Background="{TemplateBinding Background}" Padding="5">
+                                <GridViewRowPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type Button}">
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="true">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.70"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -14,20 +72,41 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="ReviewHarvester - Bağlantı Ayarları" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <Grid Margin="0,0,0,15">
+                <TextBlock Text="ReviewHarvester - Bağlantı Ayarları" 
+                           FontSize="20" FontWeight="Bold" 
+                           Foreground="{DynamicResource TextBrush}"
+                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
 
-            <Grid Margin="0,0,0,10">
+                <Button x:Name="BtnThemeToggle" Click="BtnThemeToggle_Click"
+                        Width="45" Height="40" HorizontalAlignment="Right"
+                        Background="{DynamicResource SecondaryBrush}">
+                    <TextBlock x:Name="TxtThemeIcon" Text="🌙" FontSize="18" VerticalAlignment="Center"/>
+                </Button>
+            </Grid>
+
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" x:Name="BtnLoadTxt" Content="TXT Dosyası Seç" Width="140" Height="35" Click="BtnLoadTxt_Click" Background="#8e44ad" Foreground="White" FontWeight="Bold" Margin="0,0,10,0"/>
+                <Button Grid.Column="0" x:Name="BtnLoadTxt" Content="TXT Yükle" Width="120" Height="40" 
+                        Click="BtnLoadTxt_Click" Background="{DynamicResource SecondaryBrush}" Margin="0,0,12,0"/>
 
-                <TextBox Grid.Column="1" x:Name="TxtUrl" Padding="8" FontSize="14" VerticalContentAlignment="Center"/>
+                <TextBox Grid.Column="1" x:Name="TxtUrl" Padding="12,8" FontSize="14" VerticalContentAlignment="Center" 
+                         Background="#1AFFFFFF" Foreground="{DynamicResource TextBrush}" BorderThickness="1" 
+                         BorderBrush="{DynamicResource SecondaryBrush}">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
 
-                <TextBlock Grid.Column="1" IsHitTestVisible="False" Text="Tek ürün linki girin veya soldaki butondan TXT yükleyin..." VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" Foreground="DarkGray">
+                <TextBlock Grid.Column="1" IsHitTestVisible="False" Text="Link giriniz" 
+                           VerticalAlignment="Center" HorizontalAlignment="Left" Margin="14,0,0,0" Foreground="Gray" Opacity="0.8">
                     <TextBlock.Style>
                         <Style TargetType="{x:Type TextBlock}">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -42,26 +121,40 @@
             </Grid>
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
-            <Button x:Name="BtnStart" Content="Hasadı Başlat" Width="120" Height="35" Click="BtnStart_Click" Background="#2ecc71" Foreground="White" FontWeight="Bold"/>
-            <Button x:Name="BtnCsvManager" Content="CSV Yöneticisi" Width="120" Height="35" Margin="10,0,0,0" Click="BtnCsvManager_Click" Background="#3498db" Foreground="White" FontWeight="Bold"/>
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <ProgressBar x:Name="PrgStatus" Width="300" Height="20" Margin="15,0,15,0" VerticalAlignment="Center"/>
-            <Button x:Name="BtnSave" Content="Kaydet" Width="120" Height="35" HorizontalAlignment="Right" Click="BtnSave_Click" Background="#e67e22" Foreground="White" FontWeight="Bold"/>
-        </StackPanel>
+            <Button x:Name="BtnStart" Content="Hasadı Başlat" Width="130" Height="40" 
+                    Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}"/>
 
-        <ListView Grid.Row="2" x:Name="LstReviews" ItemsSource="{Binding HarvestedReviews}">
+            <Button Grid.Column="1" x:Name="BtnCsvManager" Content="CSV Yöneticisi" Width="130" Height="40" 
+                    Margin="12,0,0,0" Click="BtnCsvManager_Click" Background="{DynamicResource SecondaryBrush}"/>
+
+            <ProgressBar Grid.Column="2" x:Name="PrgStatus" Height="10" Margin="20,0" VerticalAlignment="Center" 
+                         Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>
+
+            <Button Grid.Column="3" x:Name="BtnSave" Content="CSV Kaydet" Width="130" Height="40" 
+                    Click="BtnSave_Click" Background="{DynamicResource AccentBrush}"/>
+        </Grid>
+
+        <ListView Grid.Row="2" x:Name="LstReviews" ItemsSource="{Binding HarvestedReviews}" 
+                  Background="Transparent" BorderThickness="0">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Kullanıcı" DisplayMemberBinding="{Binding User}" Width="100"/>
-                    <GridViewColumn Header="Puan" DisplayMemberBinding="{Binding Rating}" Width="50"/>
-                    <GridViewColumn Header="Yorum" DisplayMemberBinding="{Binding Comment}" Width="550"/>
+                    <GridViewColumn Header="Kullanıcı" DisplayMemberBinding="{Binding User}" Width="120"/>
+                    <GridViewColumn Header="Puan" DisplayMemberBinding="{Binding Rating}" Width="60"/>
+                    <GridViewColumn Header="Yorum" DisplayMemberBinding="{Binding Comment}" Width="580"/>
                 </GridView>
             </ListView.View>
         </ListView>
 
-        <StatusBar Grid.Row="3" Background="Transparent" Margin="0,10,0,0">
-            <TextBlock x:Name="TxtStatus" Text="Hazır." Foreground="Gray"/>
+        <StatusBar Grid.Row="3" Background="Transparent" Margin="0,15,0,0">
+            <TextBlock x:Name="TxtStatus" Text="Hazır." Foreground="{DynamicResource TextBrush}" Opacity="0.6"/>
         </StatusBar>
     </Grid>
 </Window>
