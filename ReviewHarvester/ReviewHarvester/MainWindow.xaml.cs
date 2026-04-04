@@ -192,10 +192,29 @@ namespace ReviewHarvester
                 return;
             }
 
+            // --- 1. AKILLI İSİMLENDİRME MOTORU ---
+            // Hangi yıldızların seçili olduğunu buluyoruz
+            List<string> selectedStars = new List<string>();
+            if (Chk1.IsChecked == true) selectedStars.Add("1");
+            if (Chk2.IsChecked == true) selectedStars.Add("2");
+            if (Chk3.IsChecked == true) selectedStars.Add("3");
+            if (Chk4.IsChecked == true) selectedStars.Add("4");
+            if (Chk5.IsChecked == true) selectedStars.Add("5");
+
+            // Eğer hepsi seçiliyse "Tumu", değilse aralarına tire koy (Örn: 1-2-3)
+            string starsText = selectedStars.Count == 5 ? "Tumu" : string.Join("-", selectedStars);
+
+            // Günün tarihini alıyoruz (Karışmaması için YılAyGün formatında)
+            string dateText = DateTime.Now.ToString("yyyyMMdd");
+
+            // Örnek Çıktı: 1540_Yorum_1-2-3_Yildiz_20260403.csv
+            string smartFileName = $"{HarvestedReviews.Count}_Yorum_{starsText}_Yildiz_{dateText}.csv";
+            // ---------------------------------------
+
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "CSV dosyası (*.csv)|*.csv",
-                FileName = "reviews_data.csv"
+                FileName = smartFileName // Akıllı ismimizi varsayılan olarak atıyoruz!
             };
 
             try
@@ -207,7 +226,7 @@ namespace ReviewHarvester
                     {
                         csv.WriteRecords(HarvestedReviews);
                     }
-                    MessageBox.Show("Veriler başarıyla CSV formatına dönüştürüldü!", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Veriler başarıyla kaydedildi!\n\nDosya: {saveFileDialog.SafeFileName}", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (IOException)
@@ -221,6 +240,7 @@ namespace ReviewHarvester
         // ==========================================
         private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
         {
+            // 1. Dosya Seçimi
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
                 Filter = "CSV Dosyaları (*.csv)|*.csv",
@@ -238,11 +258,26 @@ namespace ReviewHarvester
                     return;
                 }
 
+                // --- AKILLI İSİMLENDİRME İÇİN ÖN SAYIM ---
+                int totalRows = 0;
+                foreach (var file in selectedFiles)
+                {
+                    // Dosyadaki satır sayısını al ve başlık satırını (-1) çıkar
+                    int lineCount = File.ReadLines(file).Count();
+                    totalRows += (lineCount > 0) ? (lineCount - 1) : 0;
+                }
+
+                string dateText = DateTime.Now.ToString("yyyyMMdd");
+                // Örnek: Master_5400_Yorum_Birlesik_20260403.csv
+                string smartMasterName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.csv";
+                // ----------------------------------------
+
+                // 2. Kayıt Dosyası Hazırlığı
                 SaveFileDialog saveFileDialog = new SaveFileDialog
                 {
                     Filter = "CSV Dosyası (*.csv)|*.csv",
                     Title = "Birleştirilmiş Master Dosyayı Kaydet",
-                    FileName = "Master_Reviews_Dataset.csv"
+                    FileName = smartMasterName // Akıllı ismimizi buraya verdik
                 };
 
                 if (saveFileDialog.ShowDialog() == true)
@@ -263,12 +298,12 @@ namespace ReviewHarvester
                             }
                         }
 
-                        MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla tek bir dosyada birleştirildi!\n\nKonum: {saveFileDialog.FileName}",
+                        MessageBox.Show($"{selectedFiles.Length} adet dosya birleştirildi!\nToplam Veri: {totalRows} yorum.",
                                         "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Dosyalar birleştirilirken bir hata oluştu:\n{ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"Hata: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }

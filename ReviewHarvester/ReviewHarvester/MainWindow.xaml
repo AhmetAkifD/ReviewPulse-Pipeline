@@ -104,7 +104,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="1">
-                    <Button x:Name="BtnNavScraper" Content="🔍  Hasat Merkezi" Style="{StaticResource SidebarButtonStyle}" Click="BtnNavScraper_Click"/>
+                    <Button x:Name="BtnNavScraper" Content="🔍  Scraping Merkezi" Style="{StaticResource SidebarButtonStyle}" Click="BtnNavScraper_Click"/>
                     <Button x:Name="BtnNavCsv" Content="📂  CSV Yöneticisi" Style="{StaticResource SidebarButtonStyle}" Click="BtnNavCsv_Click"/>
                 </StackPanel>
 
@@ -129,7 +129,7 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock Text="Veri Hasat Merkezi" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
+                    <TextBlock Text="Scraping Merkezi" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -160,7 +160,7 @@
 
                 <StackPanel Grid.Row="1" Margin="0,0,0,20">
 
-                    <TextBlock Text="Filtre Seçenekleri (Hasat Edilecek Puanlar)" 
+                    <TextBlock Text="Puan Filtresi" 
                        Foreground="{DynamicResource TextBrush}" 
                        FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
