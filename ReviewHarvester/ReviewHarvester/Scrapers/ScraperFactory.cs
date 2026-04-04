@@ -8,19 +8,20 @@ namespace ReviewHarvester.Scrapers
         {
             string lowerUrl = url.ToLower();
 
+            // Link Hepsiburada ise Ağır Makineyi (Selenium) çağır
             if (lowerUrl.Contains("hepsiburada.com"))
             {
-                return new Selenium(); // Ağır ama mecburi Selenium motoru
+                return new Selenium(); // Senin değiştirdiğin isme göre güncelledim
             }
-            else if (lowerUrl.Contains("amazon.com") || lowerUrl.Contains("amazon.com.tr"))
-            {
-                // return new AmazonScraper(); // Gelecekte aktif edeceğiz
-                throw new NotImplementedException("Amazon motoru yapım aşamasında!");
-            }
+            // Link Trendyol ise Yeni Hızlı Motoru (HttpClient) çağır
             else if (lowerUrl.Contains("trendyol.com"))
             {
-                // return new TrendyolScraper(); // Gelecekte aktif edeceğiz
-                throw new NotImplementedException("Trendyol motoru yapım aşamasında!");
+                return new TrendyolScraper();
+            }
+            // Diğer siteler için
+            else if (lowerUrl.Contains("amazon.com") || lowerUrl.Contains("amazon.com.tr"))
+            {
+                throw new NotImplementedException("Amazon motoru yapım aşamasında!");
             }
             else
             {
