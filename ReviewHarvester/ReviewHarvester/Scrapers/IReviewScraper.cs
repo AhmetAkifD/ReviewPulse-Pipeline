@@ -8,6 +8,6 @@ namespace ReviewHarvester.Scrapers
     {
         // UI (Arayüz) ile bağlantıyı koparmamak için Action (Callback) fonksiyonları kullanıyoruz.
         // Böylece motorlar arayüzü bilmeden arayüze veri gönderebilecek.
-        Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate);
+        Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token);
     }
 }

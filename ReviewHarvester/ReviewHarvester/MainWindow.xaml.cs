@@ -25,6 +25,7 @@ namespace ReviewHarvester
     {
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
         private List<string> _targetUrls = new List<string>();
+        private CancellationTokenSource _cts;
 
         // Tema takibi için değişken
         private bool _isDarkTheme = true;
@@ -137,6 +138,9 @@ namespace ReviewHarvester
             if (Chk4.IsChecked == true) allowedStars.Add(4);
             if (Chk5.IsChecked == true) allowedStars.Add(5);
 
+            _cts = new CancellationTokenSource();
+            BtnStop.IsEnabled = true; // Durdur butonunu aktif et
+
             try
             {
                 for (int i = 0; i < _targetUrls.Count; i++)
@@ -151,20 +155,17 @@ namespace ReviewHarvester
                     IReviewScraper scraper = ScraperFactory.GetScraper(currentUrl);
 
                     // 2. HASADI BAŞLAT VE EKRANI ANLIK GÜNCELLE
-                    int countFromThisUrl = await scraper.ScrapeAsync(
-                        url: currentUrl,
-                        allowedStars: allowedStars,
-                        onReviewFound: review =>
-                        {
-                            // Bulunan yorumu tabloya ekle
-                            Application.Current.Dispatcher.Invoke(() => HarvestedReviews.Add(review));
+                    int countFromThisUrl = await scraper.ScrapeAsync(currentUrl, allowedStars,
+                        review => 
+                        { 
+                            Application.Current.Dispatcher.Invoke(() => HarvestedReviews.Add(review)); 
                         },
-                        onStatusUpdate: statusMessage =>
-                        {
-                            // Durum mesajını ekrana yazdır
-                            Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}");
-                        }
-                    );
+                        statusMessage => 
+                        { 
+                            Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}"); 
+                        },
+                        _cts.Token // YENİ EKLENEN KISIM
+);
 
                     totalCollectedCount += countFromThisUrl;
                 }
@@ -183,6 +184,8 @@ namespace ReviewHarvester
                 BtnLoadTxt.IsEnabled = true;
                 BtnThemeToggle.IsEnabled = true;
                 PrgStatus.IsIndeterminate = false;
+                BtnStop.IsEnabled = false;
+                _cts?.Dispose();
                 _targetUrls.Clear();
             }
         }
@@ -332,6 +335,13 @@ namespace ReviewHarvester
                     }
                 }
             }
+        }
+
+        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        {
+            _cts?.Cancel(); // İptal sinyalini ateşle!
+            BtnStop.IsEnabled = false;
+            TxtStatus.Text = "Durduruluyor... Lütfen mevcut sayfanın bitmesini bekleyin.";
         }
     }
 }

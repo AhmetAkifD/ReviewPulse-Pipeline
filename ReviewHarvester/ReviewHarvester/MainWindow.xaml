@@ -196,8 +196,13 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Button x:Name="BtnStart" Content="Hasadı Başlat" Width="140" Height="40" 
-                        Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Button x:Name="BtnStart" Content="▶" Width="65" Height="40" Margin="0,0,10,0" 
+                                Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}" ToolTip="Hasadı Başlat" FontSize="20"/>
+
+                            <Button x:Name="BtnStop" Content="⏹" Width="65" Height="40" 
+                                Click="BtnStop_Click" Background="{DynamicResource AccentBrush}" ToolTip="Durdur" IsEnabled="False" FontSize="20"/>
+                        </StackPanel>
 
                         <ProgressBar Grid.Column="1" x:Name="PrgStatus" Height="8" Margin="20,0" VerticalAlignment="Center" 
                              Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>

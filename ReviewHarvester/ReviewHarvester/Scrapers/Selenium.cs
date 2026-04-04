@@ -10,7 +10,7 @@ namespace ReviewHarvester.Scrapers
 {
     public class Selenium : IReviewScraper
     {
-        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate)
+        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token)
         {
             int count = 0;
 

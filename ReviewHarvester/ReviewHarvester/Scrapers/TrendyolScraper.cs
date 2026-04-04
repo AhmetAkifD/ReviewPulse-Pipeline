@@ -1,17 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
-using Newtonsoft.Json;
 
 namespace ReviewHarvester.Scrapers
 {
     public class TrendyolScraper : IReviewScraper
     {
-        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate)
+        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token)
         {
             int count = 0;
             onStatusUpdate?.Invoke("Trendyol Klasik Selenium Motoru başlatıldı...");
@@ -22,7 +23,7 @@ namespace ReviewHarvester.Scrapers
 
                 // ÖNEMLİ: Görünmez (Headless) modu KAPATTIK! 
                 // Ekranda açılacak ki Cloudflare bizi engellerse görebilelim.
-                options.AddArgument("--start-maximized");
+                options.AddArgument("--headless?new");
                 options.AddArgument("--disable-blink-features=AutomationControlled");
                 options.AddExcludedArgument("enable-automation");
 
@@ -51,6 +52,11 @@ namespace ReviewHarvester.Scrapers
 
                         while (true)
                         {
+                            if (token.IsCancellationRequested)
+                            {
+                                onStatusUpdate?.Invoke("İşlem kullanıcı tarafından durduruldu.");
+                                break; // Döngüyü kır ve işlemi bitir
+                            }
                             onStatusUpdate?.Invoke($"Aşağı kaydırılıyor... (Toplanan: {count})");
 
                             // TRUVA ATI 2.0: Sayfadaki yorumları ve yıldızları salise hızında toplayan JS Ajanı
