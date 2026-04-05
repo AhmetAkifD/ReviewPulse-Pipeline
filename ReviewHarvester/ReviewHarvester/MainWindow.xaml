@@ -198,49 +198,32 @@
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
                             <Button x:Name="BtnStart" Content="▶" Width="65" Height="40" Margin="0,0,10,0" 
-                                Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}" ToolTip="Hasadı Başlat" FontSize="20"/>
+                                    Click="BtnStart_Click" Background="{DynamicResource SecondaryBrush}" ToolTip="Hasadı Başlat" FontSize="20"/>
 
                             <Button x:Name="BtnStop" Content="⏹" Width="65" Height="40" 
                                 Click="BtnStop_Click" Background="{DynamicResource AccentBrush}" ToolTip="Durdur" IsEnabled="False" FontSize="20"/>
                         </StackPanel>
 
                         <ProgressBar Grid.Column="1" x:Name="PrgStatus" Height="8" Margin="20,0" VerticalAlignment="Center" 
-                             Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>
+                                     Foreground="{DynamicResource SecondaryBrush}" Background="#1AFFFFFF" BorderThickness="0"/>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <ComboBox x:Name="CmbSpeed" Width="130" Height="40" Margin="0,0,15,0" SelectedIndex="0"
-                                    VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                                    Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextBrush}" 
-                                    BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}">
 
-                                <ComboBox.Resources>
-                                    <Style TargetType="ComboBoxItem">
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                        <Setter Property="Padding" Value="10,8"/>
-                                        <Setter Property="Cursor" Value="Hand"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#1AFFFFFF"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ComboBox.Resources>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <TextBlock Text="Hız Ayarı:" Foreground="{DynamicResource SecondaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
-                                <ComboBoxItem Content="Normal (2 sn)"/>
-                                <ComboBoxItem Content="İnsan Gibi (4 sn)"/>
-                            </ComboBox>
+                                <RadioButton x:Name="RdbNormal" Content="Normal (2 sn)" GroupName="SpeedGroup" IsChecked="True" 
+                                             Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,15,0" Cursor="Hand"/>
+
+                                <RadioButton x:Name="RdbHuman" Content="Uzun (4 sn)" GroupName="SpeedGroup" 
+                                             Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Cursor="Hand"/>
+                            </StackPanel>
 
                             <Button x:Name="BtnSaveJson" Content="JSON Kaydet" Width="100" Height="40" Margin="0,0,10,0"
-                                Click="BtnSaveJson_Click" Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource PrimaryBrush}"/>
+                                    Click="BtnSaveJson_Click" Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource PrimaryBrush}"/>
 
                             <Button x:Name="BtnSave" Content="CSV Kaydet" Width="100" Height="40" 
-                                Click="BtnSave_Click" Background="{DynamicResource AccentBrush}"/>
+                                    Click="BtnSave_Click" Background="{DynamicResource AccentBrush}"/>
                         </StackPanel>
                     </Grid>
 

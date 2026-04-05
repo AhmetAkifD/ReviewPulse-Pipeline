@@ -131,10 +131,14 @@ namespace ReviewHarvester
 
             int totalCollectedCount = 0;
 
-            int delayMs = 2000; // Varsayılan
+            // Kullanıcının seçtiği hızı hesapla
+            int delayMs = 2000; // Varsayılan (Normal)
             Application.Current.Dispatcher.Invoke(() => {
-                if (CmbSpeed.SelectedIndex == 0) delayMs = 2000;
-                else if (CmbSpeed.SelectedIndex == 1) delayMs = 4000;
+                // Ekranda "İnsan Gibi" seçiliyse süreyi 4 saniye yap
+                if (RdbHuman.IsChecked == true)
+                {
+                    delayMs = 4000;
+                }
             });
 
             // UI'daki CheckBox'ları okuyup tek bir listeye atıyoruz (Artık bunu tek tek bool yapmaya gerek kalmadı)
