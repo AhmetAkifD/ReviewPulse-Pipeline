@@ -368,18 +368,17 @@ namespace ReviewHarvester
             {
                 FileName = "Hasat_Verileri",
                 DefaultExt = ".json",
-                Filter = "JSON Files (*.json)|*.json"
+                Filter = "JSON Dosyaları (*.json)|*.json"
             };
 
             if (dlg.ShowDialog() == true)
             {
                 try
                 {
-                    // Veriyi güzel ve okunaklı (Indented) bir JSON formatına çeviriyoruz
                     string jsonOutput = JsonConvert.SerializeObject(HarvestedReviews, Formatting.Indented);
                     File.WriteAllText(dlg.FileName, jsonOutput);
 
-                    MessageBox.Show("JSON dosyası başarıyla kaydedildi!", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("JSON dosyası başarıyla kaydedildi! Artık Python aşamasına hazırsınız.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
