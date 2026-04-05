@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 import joblib
 import os
 import data_cleaner
@@ -14,7 +16,8 @@ st.sidebar.markdown("---")
 menu = st.sidebar.radio("İşlem Seçiniz:",
                         ("1. Veri Boru Hattı & Metrikler",
                          "2. Model Eğitimi & Ayarlar",
-                         "3. Canlı Test & Şeffaf Analiz"))
+                         "3. Toplu Analiz (JSON/CSV)",
+                         "4. Canlı Test & Şeffaf Analiz"))
 
 # --- 1. SAYFA: VERİ GÖRSELLEŞTİRME VE TEMİZLİK ---
 if menu == "1. Veri Boru Hattı & Metrikler":
@@ -117,54 +120,39 @@ elif menu == "2. Model Eğitimi & Ayarlar":
                 st.error(result)
 
 # --- 3. SAYFA: ŞEFFAF YAPAY ZEKA (AÇIKLANABİLİRLİK) ---
-elif menu == "3. Canlı Test & Şeffaf Analiz":
-    st.title("🕵️ Şeffaf Yapay Zeka (Explainable AI)")
-    st.write("Model sadece pozitif/negatif demekle kalmaz, bu kararı *neden* verdiğini de açıklar.")
+elif menu == "3. Toplu Analiz (JSON/CSV)":
+    st.title("📂 Toplu Veri Analizi")
+    st.write("C# Harvester ile topladığınız dosyaları yükleyin, saniyeler içinde analiz edelim.")
 
-    # Model yüklü mü kontrolü
-    if not os.path.exists("Model/mood_model.pkl"):
-        st.warning("Lütfen önce 2. sayfaya gidip bir model eğitin!")
-    else:
-        model = joblib.load("Model/mood_model.pkl")
-        vectorizer = joblib.load("Model/mood_vectorizer.pkl")
+    uploaded_file = st.file_uploader("Bir JSON veya CSV dosyası seçin", type=['json', 'csv'])
 
-        user_input = st.text_area("Müşteri Yorumunu Yapıştırın:", height=100)
+    if uploaded_file is not None:
+        # Dosyayı oku
+        if uploaded_file.name.endswith('.json'):
+            df_new = pd.read_json(uploaded_file)
+        else:
+            df_new = pd.read_csv(uploaded_file)
 
-        if st.button("Analiz Et ve Açıkla"):
-            if user_input:
-                # Tahmin yap
-                user_vec = vectorizer.transform([user_input])
-                prediction = model.predict(user_vec)[0]
-                prob = model.predict_proba(user_vec)[0]  # Emin olma yüzdesi
+        st.write(f"Sistemde {len(df_new)} adet yeni yorum tespit edildi.")
 
-                # Kararı Göster
-                if prediction == 1:
-                    st.success(f"### Tahmin: POZİTİF 😊 (Eminlik: % {prob[1] * 100:.1f})")
-                else:
-                    st.error(f"### Tahmin: NEGATİF 😡 (Eminlik: % {prob[0] * 100:.1f})")
-
-                st.markdown("---")
-                st.subheader("🔍 Neden Bu Kararı Verdim?")
-                st.write("Makine bu cümledeki kelimelere aşağıdaki puanları verdi:")
-
-                # AÇIKLANABİLİRLİK MATEMATİĞİ (Feature Importance)
-                feature_names = vectorizer.get_feature_names_out()
-                coefficients = model.coef_[0]
-                nonzero_indices = user_vec.nonzero()[1]
-
-                word_weights = [(feature_names[idx], coefficients[idx]) for idx in nonzero_indices]
-
-                col_pos, col_neg = st.columns(2)
-                with col_pos:
-                    st.write("👍 **Puanı Yükseltenler**")
-                    pos_words = sorted([w for w in word_weights if w[1] > 0], key=lambda x: x[1], reverse=True)
-                    for w, weight in pos_words:
-                        st.write(f"- {w.capitalize()}: `+{weight:.2f}`")
-
-                with col_neg:
-                    st.write("👎 **Puanı Düşürenler**")
-                    neg_words = sorted([w for w in word_weights if w[1] < 0], key=lambda x: x[1])
-                    for w, weight in neg_words:
-                        st.write(f"- {w.capitalize()}: `{weight:.2f}`")
+        if st.button("Tümünü Analiz Et"):
+            if not os.path.exists("Model/mood_model.pkl"):
+                st.error("Önce model eğitmelisiniz!")
             else:
-                st.warning("Lütfen bir yorum yazın.")
+                model = joblib.load("Model/mood_model.pkl")
+                vectorizer = joblib.load("Model/mood_vectorizer.pkl")
+
+                # Tahmin yap (Yorum sütununun isminin 'Comment' olduğunu varsayıyoruz)
+                with st.spinner("Yapay zeka binlerce satırı okuyor..."):
+                    # Temizlik fonksiyonunu burada tekrar çağırabiliriz
+                    df_new['Cleaned'] = df_new['Comment'].apply(lambda x: str(x).lower())
+                    X_new = vectorizer.transform(df_new['Cleaned'])
+                    df_new['Tahmin'] = model.predict(X_new)
+                    df_new['Duygu'] = df_new['Tahmin'].map({1: "Pozitif 😊", 0: "Negatif 😡"})
+
+                st.success("Analiz Tamamlandı!")
+                st.dataframe(df_new[['Comment', 'Duygu']].head(10), use_container_width=True)
+
+                # İndirme Butonu
+                csv = df_new.to_csv(index=False).encode('utf-8')
+                st.download_button("Analiz Sonuçlarını İndir (.CSV)", csv, "analiz_sonuclari.csv", "text/csv")
