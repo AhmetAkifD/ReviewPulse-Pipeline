@@ -21,11 +21,19 @@ namespace ReviewHarvester.Scrapers
             {
                 var options = new ChromeOptions();
 
-                // ÖNEMLİ: Görünmez (Headless) modu KAPATTIK! 
-                // Ekranda açılacak ki Cloudflare bizi engellerse görebilelim.
-                options.AddArgument("--headless?new");
+                options.AddArgument("--headless=new");
+
+                // Headless modun en büyük açığını kapatıyoruz: Çözünürlüğü insan gibi yapıyoruz
+                options.AddArgument("--window-size=1920,1080");
+
+                // Tarayıcının dilini Türkiye/Türkçe olarak ayarlıyoruz (Cloudflare bazen dil eksikliğinden anlar)
+                options.AddArgument("--lang=tr-TR");
+
                 options.AddArgument("--disable-blink-features=AutomationControlled");
                 options.AddExcludedArgument("enable-automation");
+                options.AddArgument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
+                options.AddUserProfilePreference("profile.default_content_setting_values.stylesheet", 2);
 
                 using (IWebDriver driver = new ChromeDriver(options))
                 {
