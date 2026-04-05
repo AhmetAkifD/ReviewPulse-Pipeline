@@ -151,7 +151,23 @@ namespace ReviewHarvester
 
             _cts = new CancellationTokenSource();
             BtnStop.IsEnabled = true; // Durdur butonunu aktif et
+            // --- ARAYÜZÜ KİLİTLE (UI LOCKDOWN) ---
+            BtnStart.IsEnabled = false;
+            BtnSave.IsEnabled = false;
+            BtnSaveJson.IsEnabled = false; // JSON butonunu da kilitliyoruz
+            BtnLoadTxt.IsEnabled = false;
+            TxtUrl.IsEnabled = false;
+            BtnThemeToggle.IsEnabled = false;
+            BtnNavScraper.IsEnabled = false; // Yan menüyü kilitle
+            BtnNavCsv.IsEnabled = false;     // Yan menüyü kilitle
 
+            // Hız ayarları ve filtreleri de kilitlemek istersen:
+            RdbNormal.IsEnabled = false;
+            RdbHuman.IsEnabled = false;
+            // -------------------------------------
+
+            _cts = new CancellationTokenSource();
+            BtnStop.IsEnabled = true; // SADECE DURDUR BUTONU AKTİF!
             try
             {
                 for (int i = 0; i < _targetUrls.Count; i++)
@@ -191,14 +207,25 @@ namespace ReviewHarvester
             }
             finally
             {
+                // --- ARAYÜZ KİLİDİNİ AÇ ---
                 BtnStart.IsEnabled = true;
                 BtnSave.IsEnabled = true;
+                BtnSaveJson.IsEnabled = true;
                 BtnLoadTxt.IsEnabled = true;
+                TxtUrl.IsEnabled = true;
                 BtnThemeToggle.IsEnabled = true;
+                BtnNavScraper.IsEnabled = true;
+                BtnNavCsv.IsEnabled = true;
+
+                RdbNormal.IsEnabled = true;
+                RdbHuman.IsEnabled = true;
+                // --------------------------
+
                 PrgStatus.IsIndeterminate = false;
-                BtnStop.IsEnabled = false;
-                _cts?.Dispose();
                 _targetUrls.Clear();
+
+                BtnStop.IsEnabled = false; // Durdur butonunu tekrar pasif yap
+                _cts?.Dispose();
             }
         }
 
@@ -364,9 +391,24 @@ namespace ReviewHarvester
                 return;
             }
 
+            // --- AKILLI İSİMLENDİRME MOTORU (JSON İÇİN) ---
+            List<string> selectedStars = new List<string>();
+            if (Chk1.IsChecked == true) selectedStars.Add("1");
+            if (Chk2.IsChecked == true) selectedStars.Add("2");
+            if (Chk3.IsChecked == true) selectedStars.Add("3");
+            if (Chk4.IsChecked == true) selectedStars.Add("4");
+            if (Chk5.IsChecked == true) selectedStars.Add("5");
+
+            string starsText = selectedStars.Count == 5 ? "Tumu" : string.Join("-", selectedStars);
+            string dateText = DateTime.Now.ToString("yyyyMMdd");
+
+            // Örnek Çıktı: 1540_Yorum_1-2-3_Yildiz_20260405.json
+            string smartFileName = $"{HarvestedReviews.Count}_Yorum_{starsText}_Yildiz_{dateText}.json";
+            // ----------------------------------------------
+
             Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog
             {
-                FileName = "Hasat_Verileri",
+                FileName = smartFileName,
                 DefaultExt = ".json",
                 Filter = "JSON Dosyaları (*.json)|*.json"
             };
@@ -376,9 +418,9 @@ namespace ReviewHarvester
                 try
                 {
                     string jsonOutput = JsonConvert.SerializeObject(HarvestedReviews, Formatting.Indented);
-                    File.WriteAllText(dlg.FileName, jsonOutput);
+                    System.IO.File.WriteAllText(dlg.FileName, jsonOutput);
 
-                    MessageBox.Show("JSON dosyası başarıyla kaydedildi! Artık Python aşamasına hazırsınız.", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"JSON dosyası başarıyla kaydedildi!\n\nDosya: {dlg.SafeFileName}", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
