@@ -571,5 +571,8 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,python
 
+# Custome folders
+Data/
+MoodMath/CSV
 Data/
 *.csv
