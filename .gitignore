@@ -574,3 +574,5 @@ pyrightconfig.json
 # Custome folders
 Data/
 MoodMath/CSV
+Data/
+*.csv
