@@ -1,6 +1,7 @@
 ﻿using CsvHelper;
 using HtmlAgilityPack; // HTML parsing için (Gelecekte gerekebilir)
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -130,6 +131,12 @@ namespace ReviewHarvester
 
             int totalCollectedCount = 0;
 
+            int delayMs = 2000; // Varsayılan
+            Application.Current.Dispatcher.Invoke(() => {
+                if (CmbSpeed.SelectedIndex == 0) delayMs = 2000;
+                else if (CmbSpeed.SelectedIndex == 1) delayMs = 4000;
+            });
+
             // UI'daki CheckBox'ları okuyup tek bir listeye atıyoruz (Artık bunu tek tek bool yapmaya gerek kalmadı)
             List<int> allowedStars = new List<int>();
             if (Chk1.IsChecked == true) allowedStars.Add(1);
@@ -164,8 +171,9 @@ namespace ReviewHarvester
                         { 
                             Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}"); 
                         },
-                        _cts.Token // YENİ EKLENEN KISIM
-);
+                        _cts.Token, // YENİ EKLENEN KISIM
+                        delayMs
+                    );
 
                     totalCollectedCount += countFromThisUrl;
                 }
@@ -342,6 +350,38 @@ namespace ReviewHarvester
             _cts?.Cancel(); // İptal sinyalini ateşle!
             BtnStop.IsEnabled = false;
             TxtStatus.Text = "Durduruluyor... Lütfen mevcut sayfanın bitmesini bekleyin.";
+        }
+
+        private void BtnSaveJson_Click(object sender, RoutedEventArgs e)
+        {
+            if (HarvestedReviews.Count == 0)
+            {
+                MessageBox.Show("Kaydedilecek veri yok. Önce hasadı başlatın.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = "Hasat_Verileri",
+                DefaultExt = ".json",
+                Filter = "JSON Files (*.json)|*.json"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                try
+                {
+                    // Veriyi güzel ve okunaklı (Indented) bir JSON formatına çeviriyoruz
+                    string jsonOutput = JsonConvert.SerializeObject(HarvestedReviews, Formatting.Indented);
+                    File.WriteAllText(dlg.FileName, jsonOutput);
+
+                    MessageBox.Show("JSON dosyası başarıyla kaydedildi!", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Kayıt sırasında hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
     }
 }

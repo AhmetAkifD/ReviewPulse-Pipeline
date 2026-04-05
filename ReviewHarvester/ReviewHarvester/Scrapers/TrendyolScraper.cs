@@ -12,7 +12,7 @@ namespace ReviewHarvester.Scrapers
 {
     public class TrendyolScraper : IReviewScraper
     {
-        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token)
+        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token, int delayMs)
         {
             int count = 0;
             onStatusUpdate?.Invoke("Trendyol Klasik Selenium Motoru başlatıldı...");
@@ -165,7 +165,7 @@ namespace ReviewHarvester.Scrapers
                             js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
 
                             // Trendyol'un yeni yorumları yüklemesi için bekle
-                            Thread.Sleep(2500);
+                            Thread.Sleep(delayMs);
 
                             // Eğer yeni yorum gelmiyorsa döngüyü kırma mantığı
                             if (seenReviews.Count == previousCount)

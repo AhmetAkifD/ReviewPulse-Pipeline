@@ -10,7 +10,7 @@ namespace ReviewHarvester.Scrapers
 {
     public class Selenium : IReviewScraper
     {
-        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token)
+        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token, int delayMs)
         {
             int count = 0;
 
@@ -107,6 +107,7 @@ namespace ReviewHarvester.Scrapers
                             else
                             {
                                 page++;
+                                Thread.Sleep(delayMs);
                             }
                         }
                     }

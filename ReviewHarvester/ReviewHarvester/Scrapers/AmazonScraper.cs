@@ -13,7 +13,7 @@ namespace ReviewHarvester.Scrapers
 {
     public class AmazonScraper : IReviewScraper
     {
-        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token)
+        public async Task<int> ScrapeAsync(string url, List<int> allowedStars, Action<Review> onReviewFound, Action<string> onStatusUpdate, CancellationToken token, int delayMs)
         {
             int count = 0;
             onStatusUpdate?.Invoke("Amazon Motoru (Kalıcı Profil) başlatıldı...");
@@ -67,7 +67,7 @@ namespace ReviewHarvester.Scrapers
                             onStatusUpdate?.Invoke($"Amazon: {page}. sayfa taranıyor... (Toplanan: {count})");
 
                             driver.Navigate().GoToUrl(pageUrl);
-                            Thread.Sleep(3000);
+                            Thread.Sleep(delayMs);
 
                             // SİHİRLİ DOKUNUŞ 2: Giriş veya Captcha Kontrolü
                             if (driver.Url.Contains("signin") || driver.Url.Contains("ap/signin") || driver.Title.Contains("Robot"))
