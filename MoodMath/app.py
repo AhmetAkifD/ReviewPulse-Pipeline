@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import joblib
 import os
 import data_cleaner
@@ -53,7 +54,40 @@ if menu == "1. Veri Boru Hattı & Metrikler":
         # Görselleştirme
         st.write("**Duygu Dağılım Grafiği**")
         chart_data = pd.DataFrame({"Yorum Sayısı": [neg_count, pos_count]}, index=["Negatif", "Pozitif"])
-        st.bar_chart(chart_data, color="#ff4b4b")
+        # --- GÜNCEL VE ŞIK GRAFİK (PLOTLY) ---
+        st.markdown("---")
+        st.write("**Duygu Dağılım Grafiği**")
+
+        # Grafik için veriyi hazırlıyoruz
+        df_chart = pd.DataFrame({
+            "Duygu": ["Negatif", "Pozitif"],
+            "Yorum Sayısı": [neg_count, pos_count]
+        })
+
+        # Plotly Express ile grafiği çiziyoruz
+        fig = px.bar(
+            df_chart,
+            x="Duygu",
+            y="Yorum Sayısı",
+            color="Duygu",
+            color_discrete_map={"Negatif": "#ff4b4b", "Pozitif": "#21c354"},  # Özel renkler
+            text="Yorum Sayısı"  # Sütunların üstüne rakamları yaz
+        )
+
+        # Tasarım İnce Ayarları
+        fig.update_traces(
+            width=0.3,  # Sütun kalınlığı (0.3 çok daha ince ve zarif durur)
+            textposition='outside'  # Rakamları sütunun üstüne koy
+        )
+        fig.update_layout(
+            xaxis_tickangle=0,  # X eksenindeki yazıları (Negatif/Pozitif) tam yatay yap
+            showlegend=False,  # Yanda gereksiz kutucuk (legend) çıkmasın
+            margin=dict(t=30, b=10, l=10, r=10),  # Kenar boşluklarını daralt
+            height=400  # Grafiğin genel boyu
+        )
+
+        # Grafiği Streamlit'e bas
+        st.plotly_chart(fig, use_container_width=True)
     except:
         st.info("Metrikleri görmek için lütfen önce veriyi temizleyin.")
 
