@@ -21,7 +21,7 @@ namespace ReviewHarvester.Scrapers
             {
                 var options = new ChromeOptions();
 
-                // options.AddArgument("--headless=new"); // Test aşamasında tıklamaları görmek istersen bunu yoruma alabilirsin
+                options.AddArgument("--headless=new"); // Test aşamasında tıklamaları görmek istersen bunu yoruma alabilirsin
 
                 // Headless modun en büyük açığını kapatıyoruz: Çözünürlüğü insan gibi yapıyoruz
                 options.AddArgument("--window-size=1920,1080");

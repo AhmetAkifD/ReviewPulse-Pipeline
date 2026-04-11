@@ -124,24 +124,34 @@ namespace ReviewHarvester
 
             HarvestedReviews.Clear();
 
+            // --- ARAYÜZÜ KİLİTLE (UI LOCKDOWN) - TEKRARLARDAN TEMİZLENDİ ---
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
+            BtnSaveJson.IsEnabled = false;
             BtnLoadTxt.IsEnabled = false;
+            TxtUrl.IsEnabled = false;
             BtnThemeToggle.IsEnabled = false;
+            BtnNavScraper.IsEnabled = false;
+            BtnNavCsv.IsEnabled = false;
+            RdbNormal.IsEnabled = false;
+            RdbHuman.IsEnabled = false;
+
+            _cts = new CancellationTokenSource();
+            BtnStop.IsEnabled = true; // SADECE DURDUR BUTONU AKTİF!
+                                      // ---------------------------------------------------------------
 
             int totalCollectedCount = 0;
 
             // Kullanıcının seçtiği hızı hesapla
             int delayMs = 2000; // Varsayılan (Normal)
             Application.Current.Dispatcher.Invoke(() => {
-                // Ekranda "İnsan Gibi" seçiliyse süreyi 4 saniye yap
                 if (RdbHuman.IsChecked == true)
                 {
                     delayMs = 4000;
                 }
             });
 
-            // UI'daki CheckBox'ları okuyup tek bir listeye atıyoruz (Artık bunu tek tek bool yapmaya gerek kalmadı)
+            // UI'daki CheckBox'ları oku
             List<int> allowedStars = new List<int>();
             if (Chk1.IsChecked == true) allowedStars.Add(1);
             if (Chk2.IsChecked == true) allowedStars.Add(2);
@@ -149,25 +159,9 @@ namespace ReviewHarvester
             if (Chk4.IsChecked == true) allowedStars.Add(4);
             if (Chk5.IsChecked == true) allowedStars.Add(5);
 
-            _cts = new CancellationTokenSource();
-            BtnStop.IsEnabled = true; // Durdur butonunu aktif et
-            // --- ARAYÜZÜ KİLİTLE (UI LOCKDOWN) ---
-            BtnStart.IsEnabled = false;
-            BtnSave.IsEnabled = false;
-            BtnSaveJson.IsEnabled = false; // JSON butonunu da kilitliyoruz
-            BtnLoadTxt.IsEnabled = false;
-            TxtUrl.IsEnabled = false;
-            BtnThemeToggle.IsEnabled = false;
-            BtnNavScraper.IsEnabled = false; // Yan menüyü kilitle
-            BtnNavCsv.IsEnabled = false;     // Yan menüyü kilitle
+            if (allowedStars.Count == 0) allowedStars = new List<int> { 1, 2, 3, 4, 5 };
+            allowedStars = allowedStars.OrderByDescending(x => x).ToList();
 
-            // Hız ayarları ve filtreleri de kilitlemek istersen:
-            RdbNormal.IsEnabled = false;
-            RdbHuman.IsEnabled = false;
-            // -------------------------------------
-
-            _cts = new CancellationTokenSource();
-            BtnStop.IsEnabled = true; // SADECE DURDUR BUTONU AKTİF!
             try
             {
                 for (int i = 0; i < _targetUrls.Count; i++)
@@ -178,20 +172,28 @@ namespace ReviewHarvester
                     TxtUrl.Text = currentUrl;
                     PrgStatus.IsIndeterminate = true;
 
-                    // 1. İLGİLİ SİTE İÇİN DOĞRU MOTORU (SCRAPER) AL
+                    // 1. DOĞRU MOTORU (SCRAPER) AL
                     IReviewScraper scraper = ScraperFactory.GetScraper(currentUrl);
 
-                    // 2. HASADI BAŞLAT VE EKRANI ANLIK GÜNCELLE
+                    // 2. HASADI BAŞLAT
                     int countFromThisUrl = await scraper.ScrapeAsync(currentUrl, allowedStars,
-                        review => 
-                        { 
-                            Application.Current.Dispatcher.Invoke(() => HarvestedReviews.Add(review)); 
+                        review =>
+                        {
+                            // İŞTE KRİTİK DÜZELTME: İki işlemi de süslü parantez içine aldık!
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                HarvestedReviews.Add(review);
+                                LstReviews.ScrollIntoView(review);
+                            });
                         },
-                        statusMessage => 
-                        { 
-                            Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}"); 
+                        statusMessage =>
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}";
+                            });
                         },
-                        _cts.Token, // YENİ EKLENEN KISIM
+                        _cts.Token,
                         delayMs
                     );
 
@@ -216,15 +218,13 @@ namespace ReviewHarvester
                 BtnThemeToggle.IsEnabled = true;
                 BtnNavScraper.IsEnabled = true;
                 BtnNavCsv.IsEnabled = true;
-
                 RdbNormal.IsEnabled = true;
                 RdbHuman.IsEnabled = true;
-                // --------------------------
 
                 PrgStatus.IsIndeterminate = false;
                 _targetUrls.Clear();
 
-                BtnStop.IsEnabled = false; // Durdur butonunu tekrar pasif yap
+                BtnStop.IsEnabled = false;
                 _cts?.Dispose();
             }
         }
