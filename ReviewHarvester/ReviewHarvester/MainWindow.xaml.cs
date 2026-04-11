@@ -307,11 +307,11 @@ namespace ReviewHarvester
         // ==========================================
         private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Dosya Seçimi
+            // 1. Dosya Seçimi (Artık hem CSV hem JSON destekliyor)
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
-                Filter = "CSV Dosyaları (*.csv)|*.csv",
-                Title = "Birleştirilecek CSV Dosyalarını Seçin",
+                Filter = "Veri Dosyaları (*.csv;*.json)|*.csv;*.json",
+                Title = "Birleştirilecek Dosyaları Seçin (CSV veya JSON)",
                 Multiselect = true
             };
 
@@ -321,56 +321,108 @@ namespace ReviewHarvester
 
                 if (selectedFiles.Length < 2)
                 {
-                    MessageBox.Show("Birleştirme işlemi için en az 2 adet CSV dosyası seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Birleştirme işlemi için en az 2 adet dosya seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                // --- AKILLI İSİMLENDİRME İÇİN ÖN SAYIM ---
-                int totalRows = 0;
-                foreach (var file in selectedFiles)
+                // 2. Akıllı Format Kontrolü: Dosyalar CSV mi, JSON mu?
+                bool hasCsv = selectedFiles.Any(f => f.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+                bool hasJson = selectedFiles.Any(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+
+                if (hasCsv && hasJson)
                 {
-                    // Dosyadaki satır sayısını al ve başlık satırını (-1) çıkar
-                    int lineCount = File.ReadLines(file).Count();
-                    totalRows += (lineCount > 0) ? (lineCount - 1) : 0;
+                    // NLP modeline gidecek verinin bozulmaması için karışık birleştirmeyi reddediyoruz
+                    MessageBox.Show("Lütfen sadece CSV veya sadece JSON dosyalarını kendi aralarında birleştirin. Karışık format seçimi desteklenmiyor.", "Format Uyuşmazlığı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
 
+                int totalRows = 0;
                 string dateText = DateTime.Now.ToString("yyyyMMdd");
-                // Örnek: Master_5400_Yorum_Birlesik_20260403.csv
-                string smartMasterName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.csv";
-                // ----------------------------------------
 
-                // 2. Kayıt Dosyası Hazırlığı
-                SaveFileDialog saveFileDialog = new SaveFileDialog
+                // ==========================================
+                // SENARYO A: CSV BİRLEŞTİRME
+                // ==========================================
+                if (hasCsv)
                 {
-                    Filter = "CSV Dosyası (*.csv)|*.csv",
-                    Title = "Birleştirilmiş Master Dosyayı Kaydet",
-                    FileName = smartMasterName // Akıllı ismimizi buraya verdik
-                };
+                    foreach (var file in selectedFiles)
+                    {
+                        int lineCount = File.ReadLines(file).Count();
+                        totalRows += (lineCount > 0) ? (lineCount - 1) : 0; // Başlıkları düş
+                    }
 
-                if (saveFileDialog.ShowDialog() == true)
+                    SaveFileDialog saveFileDialog = new SaveFileDialog
+                    {
+                        Filter = "CSV Dosyası (*.csv)|*.csv",
+                        Title = "Birleştirilmiş Master CSV'yi Kaydet",
+                        FileName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.csv"
+                    };
+
+                    if (saveFileDialog.ShowDialog() == true)
+                    {
+                        try
+                        {
+                            using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                            {
+                                for (int i = 0; i < selectedFiles.Length; i++)
+                                {
+                                    string[] lines = File.ReadAllLines(selectedFiles[i]);
+                                    int startLine = (i == 0) ? 0 : 1; // Sadece ilk dosyanın başlığını(header) al
+
+                                    for (int j = startLine; j < lines.Length; j++)
+                                    {
+                                        writer.WriteLine(lines[j]);
+                                    }
+                                }
+                            }
+                            MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla birleştirildi!\nToplam Veri: {totalRows} yorum.", "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"CSV Birleştirme Hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+                // ==========================================
+                // SENARYO B: JSON BİRLEŞTİRME
+                // ==========================================
+                else if (hasJson)
                 {
+                    List<dynamic> combinedJsonData = new List<dynamic>();
+
                     try
                     {
-                        using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                        foreach (var file in selectedFiles)
                         {
-                            for (int i = 0; i < selectedFiles.Length; i++)
+                            string jsonContent = File.ReadAllText(file);
+                            // Sınıf yapısına bağlı kalmadan esnek (dynamic) olarak listeleri okuyoruz
+                            var data = JsonConvert.DeserializeObject<List<dynamic>>(jsonContent);
+                            if (data != null)
                             {
-                                string[] lines = File.ReadAllLines(selectedFiles[i]);
-                                int startLine = (i == 0) ? 0 : 1;
-
-                                for (int j = startLine; j < lines.Length; j++)
-                                {
-                                    writer.WriteLine(lines[j]);
-                                }
+                                combinedJsonData.AddRange(data);
                             }
                         }
 
-                        MessageBox.Show($"{selectedFiles.Length} adet dosya birleştirildi!\nToplam Veri: {totalRows} yorum.",
-                                        "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        totalRows = combinedJsonData.Count;
+
+                        SaveFileDialog saveFileDialog = new SaveFileDialog
+                        {
+                            Filter = "JSON Dosyası (*.json)|*.json",
+                            Title = "Birleştirilmiş Master JSON'u Kaydet",
+                            FileName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.json"
+                        };
+
+                        if (saveFileDialog.ShowDialog() == true)
+                        {
+                            // Tüm listeyi tekrar tek bir JSON array'i olarak formatlı şekilde yazıyoruz
+                            string finalJson = JsonConvert.SerializeObject(combinedJsonData, Formatting.Indented);
+                            File.WriteAllText(saveFileDialog.FileName, finalJson, Encoding.UTF8);
+
+                            MessageBox.Show($"{selectedFiles.Length} adet JSON dosyası başarıyla birleştirildi!\nToplam Veri: {totalRows} yorum.", "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Hata: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"JSON Birleştirme Hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
