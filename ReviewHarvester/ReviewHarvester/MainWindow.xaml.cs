@@ -27,6 +27,7 @@ namespace ReviewHarvester
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
         private List<string> _targetUrls = new List<string>();
         private CancellationTokenSource _cts;
+        private string _currentBackupFilePath = "";
 
         // Tema takibi için değişken
         private bool _isDarkTheme = true;
@@ -162,6 +163,14 @@ namespace ReviewHarvester
             if (allowedStars.Count == 0) allowedStars = new List<int> { 1, 2, 3, 4, 5 };
             allowedStars = allowedStars.OrderByDescending(x => x).ToList();
 
+            // --- YEDEKLEME İÇİN OTURUM DOSYASINI HAZIRLA ---
+            string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
+            if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
+
+            // Sadece başlatmaya basıldığında saniyesine kadar benzersiz bir isim üret
+            _currentBackupFilePath = Path.Combine(backupDir, $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+            // -----------------------------------------------
+
             try
             {
                 for (int i = 0; i < _targetUrls.Count; i++)
@@ -184,6 +193,12 @@ namespace ReviewHarvester
                             {
                                 HarvestedReviews.Add(review);
                                 LstReviews.ScrollIntoView(review);
+                                if (HarvestedReviews.Count % 50 == 0)
+                                {
+                                    AutoSaveReviews();
+                                    // Opsiyonel: Durum çubuğunda kısa bir bildirim göster
+                                    TxtStatus.Text = $"(Otomatik Yedek Alındı) {TxtStatus.Text}";
+                                }
                             });
                         },
                         statusMessage =>
@@ -478,6 +493,23 @@ namespace ReviewHarvester
                 {
                     MessageBox.Show($"Kayıt sırasında hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        private void AutoSaveReviews()
+        {
+            try
+            {
+                // Eğer yol boşsa (bir hata olduysa) çık
+                if (string.IsNullOrEmpty(_currentBackupFilePath)) return;
+
+                // O ana kadar toplanan tüm listeyi JSON'a çevir ve SABİT dosyanın ÜZERİNE YAZ
+                string json = JsonConvert.SerializeObject(HarvestedReviews, Formatting.Indented);
+                File.WriteAllText(_currentBackupFilePath, json, Encoding.UTF8);
+            }
+            catch
+            {
+                // Yedekleme arka planda sessizce başarısız olabilir, kullanıcıyı rahatsız etmeyelim
             }
         }
     }
