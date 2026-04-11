@@ -21,12 +21,12 @@ namespace ReviewHarvester.Scrapers
             {
                 var options = new ChromeOptions();
 
-                options.AddArgument("--headless=new");
+                options.AddArgument("--headless=new"); // Test aşamasında tıklamaları görmek istersen bunu yoruma alabilirsin
 
                 // Headless modun en büyük açığını kapatıyoruz: Çözünürlüğü insan gibi yapıyoruz
                 options.AddArgument("--window-size=1920,1080");
 
-                // Tarayıcının dilini Türkiye/Türkçe olarak ayarlıyoruz (Cloudflare bazen dil eksikliğinden anlar)
+                // Tarayıcının dilini Türkiye/Türkçe olarak ayarlıyoruz
                 options.AddArgument("--lang=tr-TR");
 
                 options.AddArgument("--disable-blink-features=AutomationControlled");
@@ -50,136 +50,179 @@ namespace ReviewHarvester.Scrapers
                         driver.Navigate().GoToUrl(baseUrl);
 
                         // Sayfanın tamamen yüklenmesi ve güvenlik testlerinin geçmesi için bekle
-                        Thread.Sleep(4000);
+                        Thread.Sleep(5000);
 
                         HashSet<string> seenReviews = new HashSet<string>();
-                        int previousCount = 0;
-                        int noChangeCounter = 0;
-
                         IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
 
-                        while (true)
+                        // HER BİR SEÇİLİ YILDIZ İÇİN DÖNGÜ BAŞLIYOR
+                        foreach (int currentStar in allowedStars)
                         {
-                            if (token.IsCancellationRequested)
-                            {
-                                onStatusUpdate?.Invoke("İşlem kullanıcı tarafından durduruldu.");
-                                break; // Döngüyü kır ve işlemi bitir
-                            }
-                            onStatusUpdate?.Invoke($"Aşağı kaydırılıyor... (Toplanan: {count})");
+                            if (token.IsCancellationRequested) break;
 
-                            // TRUVA ATI 2.0: Sayfadaki yorumları ve yıldızları salise hızında toplayan JS Ajanı
-                            // TRUVA ATI 2.1: Gelişmiş ve Saldırgan JS Ajanı
-                            // TRUVA ATI 3.0: "Aşağıdan Yukarı" (Bottom-Up) Taraması
-                            // TRUVA ATI 3.1: Anti-Parazit Kalkanlı "Bottom-Up" Taraması
-                            // TRUVA ATI 4.0: Doğrudan Hedefe Kilitli (Target-Locked) Ajan
-                            string extractionScript = @"
-                                var results = [];
-                                
-                                // Senin bulduğun o sihirli kelimeyi (class adını) arıyoruz!
-                                // 'class*=' kullanıyoruz ki yanına 'review-comment-123' gibi rastgele kodlar ekleseler bile yakalayalım.
-                                var comments = document.querySelectorAll('[class*=""review-comment""]');
-                                
-                                for(var i=0; i<comments.length; i++){
-                                    var c = comments[i];
-                                    var text = c.innerText.trim();
-                                    
-                                    // Çok kısa veya boş yazıları geç
-                                    if(text.length < 5) continue;
-                                    
-                                    // Trendyol'un Yapay Zeka özetini her ihtimale karşı yine engelliyoruz
-                                    if(text.includes('Yapay Zeka') || text.includes('Değerlendirme Özeti')) continue;
-                                    
-                                    // Metni bulduk! Şimdi tek yapmamız gereken bağlı olduğu karttaki yıldızları bulmak.
-                                    var parent = c.parentElement;
-                                    var starDiv = null;
-                                    var attempts = 0;
-                                    
-                                    // En fazla 6 kademe yukarı çıkıp yıldız kutusunu arıyoruz
-                                    while(parent && attempts < 6){
-                                        starDiv = parent.querySelector('.star-w, [class*=""star""], [class*=""rating""]');
-                                        if(starDiv) break;
-                                        parent = parent.parentElement;
-                                        attempts++;
-                                    }
-                                    
-                                    // Yıldızı bulduysak genişliğinden puanı hesapla (Bulamazsa varsayılan 5)
-                                    var star = 5; 
-                                    if(starDiv) {
-                                        var fullStar = starDiv.querySelector('.full, .fill, [style*=""width""]');
-                                        if(fullStar) {
-                                            var w = fullStar.getAttribute('style') || '';
-                                            if(w.includes('100')) star = 5;
-                                            else if(w.includes('80')) star = 4;
-                                            else if(w.includes('60')) star = 3;
-                                            else if(w.includes('40')) star = 2;
-                                            else if(w.includes('20')) star = 1;
+                            onStatusUpdate?.Invoke($"Trendyol: {currentStar} Yıldız filtresi aranıyor...");
+
+                            try
+                            {
+                                // AŞAMA 1: Puan Menüsünü Aç (Test-ID ile Keskin Atış)
+                                js.ExecuteScript(@"
+                                    var puanBtn = document.querySelector('[data-testid=""filter-toggle-rate""]');
+                                    if(puanBtn) puanBtn.click();
+                                ");
+                                Thread.Sleep(1000); // Menünün açılmasını bekle
+
+                                // AŞAMA 2: Temizle Butonu (Güvenlik için önceki seçimleri kaldır)
+                                js.ExecuteScript(@"
+                                    var btns = document.querySelectorAll('button');
+                                    for(var i=0; i<btns.length; i++) {
+                                        if(btns[i].innerText && btns[i].innerText.trim() === 'Temizle') {
+                                            btns[i].click(); 
+                                            break;
                                         }
                                     }
+                                ");
+                                Thread.Sleep(500);
+
+                                // AŞAMA 3: İlgili Yıldızı Bul ve Seç (Senin getirdiğin html yapısına göre)
+                                js.ExecuteScript($@"
+                                    // Bütün checkbox kapsayıcılarını al (Gelen istihbarattaki yapı)
+                                    var checkboxes = document.querySelectorAll('[data-testid=""checkbox""]');
                                     
-                                    results.push({ text: text, star: star });
+                                    for(var i=0; i<checkboxes.length; i++) {{
+                                        var el = checkboxes[i];
+                                        // Öğenin içindeki yazıyı al (Örn: '1 (2434)')
+                                        var text = el.innerText.trim(); 
+                                        
+                                        // Eğer yazı aradığımız yıldızla başlıyorsa
+                                        if(text.startsWith('{currentStar}')) {{
+                                            // İçindeki asıl <input type='checkbox'> öğesini bulup tıkla
+                                            var input = el.querySelector('input');
+                                            if(input) input.click();
+                                            else el.click(); // Input yoksa geneline tıkla
+                                            
+                                            break; // Bulduk ve tıkladık, döngüyü bitir
+                                        }}
+                                    }}
+                                ");
+                                Thread.Sleep(500);
+
+                                // AŞAMA 4: Uygula Butonu (Test-ID ile Keskin Atış)
+                                js.ExecuteScript(@"
+                                    var uygulaBtn = document.querySelector('[data-testid=""filter-apply-button-rate""]');
+                                    if(uygulaBtn) uygulaBtn.click();
+                                ");
+
+                                // Filtre uygulandıktan sonra yeni yorumların DOM'a (ekrana) düşmesi için bekle
+                                Thread.Sleep(4000);
+                            }
+                            catch (Exception)
+                            {
+                                // Herhangi bir nedenle menü açılmazsa veya yıldız bulunamazsa atla
+                                continue;
+                            }
+
+                            // Bu yıldızın kaydırma (scroll) işlemi için sayaçları sıfırlıyoruz
+                            int previousCount = seenReviews.Count;
+                            int noChangeCounter = 0;
+
+                            // AŞAĞI KAYDIRMA (SCROLL) DÖNGÜSÜ
+                            while (true)
+                            {
+                                if (token.IsCancellationRequested)
+                                {
+                                    onStatusUpdate?.Invoke("İşlem kullanıcı tarafından durduruldu.");
+                                    break;
                                 }
-                                
-                                // Selenium sayfayı aşağı kaydırdıkça aynı yorumları tekrar okumasın diye mükerrerleri siliyoruz
-                                var uniqueResults = [];
-                                var seen = new Set();
-                                for(var j=0; j<results.length; j++){
-                                    if(!seen.has(results[j].text)){
-                                        seen.add(results[j].text);
-                                        uniqueResults.push(results[j]);
+
+                                onStatusUpdate?.Invoke($"Trendyol {currentStar} Yıldız: Aşağı kaydırılıyor... (Toplanan: {count})");
+
+                                // DİKKAT: Başına $ işareti koyduk ki C# değişkeni olan {currentStar}'ı içeri sızdırabilelim.
+                                string extractionScript = $@"
+                                    var results = [];
+                                    
+                                    // İstihbarat 6: Doğrudan senin bulduğun review-comment class'ını hedef alıyoruz!
+                                    // İç içe span olması fark etmez, querySelectorAll ve innerText onu dümdüz bir yazıya çevirir.
+                                    var comments = document.querySelectorAll('.review-comment');
+                                    
+                                    for(var i = 0; i < comments.length; i++) {{
+                                        var text = comments[i].innerText.trim();
+                                        
+                                        // 5 karakterden kısa boşlukları veya sistemsel özetleri atla
+                                        if(text.length < 5) continue;
+                                        if(text.includes('Yapay Zeka') || text.includes('Değerlendirme Özeti')) continue;
+                                        
+                                        // Boy/kilo gibi gereksiz detaylar bu class'ın DıŞıNDA kaldığı için 
+                                        // o uzun blacklist filtrelerine artık hiç gerek yok!
+                                        
+                                        // Puanı zaten arayüzden fiziksel olarak tıkladığımız için C#'tan alıyoruz.
+                                        var star = {currentStar};
+                                        
+                                        results.push({{ text: text, star: star }});
+                                    }}
+                                    
+                                    // Mükerrer (aynı) yorumları ele
+                                    var uniqueResults = [];
+                                    var seen = new Set();
+                                    for(var k = 0; k < results.length; k++) {{
+                                        if(!seen.has(results[k].text)) {{
+                                            seen.add(results[k].text);
+                                            uniqueResults.push(results[k]);
+                                        }}
+                                    }}
+                                    
+                                    return JSON.stringify(uniqueResults);
+                                ";
+
+                                // JS ajanını çalıştır
+                                string jsonResult = (string)js.ExecuteScript(extractionScript);
+                                var scrapedData = JsonConvert.DeserializeObject<List<dynamic>>(jsonResult);
+
+                                if (scrapedData != null)
+                                {
+                                    foreach (var item in scrapedData)
+                                    {
+                                        string reviewText = item.text.ToString().Replace('\n', ' ');
+                                        int star = (int)item.star;
+
+                                        if (seenReviews.Contains(reviewText)) continue;
+                                        if (!allowedStars.Contains(star)) continue;
+
+                                        seenReviews.Add(reviewText);
+
+                                        onReviewFound?.Invoke(new Review
+                                        {
+                                            User = "Anonim",
+                                            Comment = reviewText,
+                                            Rating = star,
+                                            Source = "Trendyol"
+                                        });
+                                        count++;
                                     }
                                 }
-                                
-                                return JSON.stringify(uniqueResults);
-                            ";
 
-                            // JS ajanını çalıştır ve veriyi al
-                            string jsonResult = (string)js.ExecuteScript(extractionScript);
+                                // Sayfayı en aşağı kaydır (Lazy loading tetiklensin)
+                                js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
 
-                            // Gelen JSON verisini C# listesine çevir
-                            var scrapedData = JsonConvert.DeserializeObject<List<dynamic>>(jsonResult);
+                                // Trendyol'un yeni yorumları yüklemesi için kullanıcının seçtiği süre kadar bekle
+                                Thread.Sleep(delayMs);
 
-                            if (scrapedData != null)
-                            {
-                                foreach (var item in scrapedData)
+                                // Döngü kırma mantığı (O yıldızdaki yorumlar bittiyse)
+                                if (seenReviews.Count == previousCount)
                                 {
-                                    string reviewText = item.text.ToString().Replace('\n', ' ');
-                                    int star = (int)item.star;
-
-                                    if (seenReviews.Contains(reviewText)) continue;
-                                    if (!allowedStars.Contains(star)) continue;
-
-                                    seenReviews.Add(reviewText);
-
-                                    onReviewFound?.Invoke(new Review
-                                    {
-                                        User = "Anonim",
-                                        Comment = reviewText,
-                                        Rating = star,
-                                        Source = "Trendyol"
-                                    });
-                                    count++;
+                                    noChangeCounter++;
+                                    if (noChangeCounter >= 3)
+                                        break; // Bu yıldız bitti, foreach döngüsü sıradaki yıldıza geçecek
                                 }
+                                else
+                                {
+                                    noChangeCounter = 0;
+                                }
+
+                                previousCount = seenReviews.Count;
                             }
 
-                            // Sayfayı en aşağı kaydır (Lazy loading tetiklensin)
-                            js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
-
-                            // Trendyol'un yeni yorumları yüklemesi için bekle
-                            Thread.Sleep(delayMs);
-
-                            // Eğer yeni yorum gelmiyorsa döngüyü kırma mantığı
-                            if (seenReviews.Count == previousCount)
-                            {
-                                noChangeCounter++;
-                                if (noChangeCounter >= 3) // 3 kez kaydırdık ve yeni yorum gelmediyse işimiz bitti demektir
-                                    break;
-                            }
-                            else
-                            {
-                                noChangeCounter = 0; // Yeni yorum geldiyse sayacı sıfırla
-                            }
-
-                            previousCount = seenReviews.Count;
+                            // Eğer iptal edildiyse foreach döngüsünden de çık
+                            if (token.IsCancellationRequested) break;
                         }
                     }
                     catch (Exception ex)
@@ -188,7 +231,6 @@ namespace ReviewHarvester.Scrapers
                     }
                     finally
                     {
-                        // Arka planda tarayıcı açık kalmasın
                         driver.Quit();
                     }
                 }

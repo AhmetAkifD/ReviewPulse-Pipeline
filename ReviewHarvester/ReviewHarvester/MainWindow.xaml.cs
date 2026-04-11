@@ -27,6 +27,7 @@ namespace ReviewHarvester
         public ObservableCollection<Review> HarvestedReviews { get; set; } = new ObservableCollection<Review>();
         private List<string> _targetUrls = new List<string>();
         private CancellationTokenSource _cts;
+        private string _currentBackupFilePath = "";
 
         // Tema takibi için değişken
         private bool _isDarkTheme = true;
@@ -124,24 +125,34 @@ namespace ReviewHarvester
 
             HarvestedReviews.Clear();
 
+            // --- ARAYÜZÜ KİLİTLE (UI LOCKDOWN) - TEKRARLARDAN TEMİZLENDİ ---
             BtnStart.IsEnabled = false;
             BtnSave.IsEnabled = false;
+            BtnSaveJson.IsEnabled = false;
             BtnLoadTxt.IsEnabled = false;
+            TxtUrl.IsEnabled = false;
             BtnThemeToggle.IsEnabled = false;
+            BtnNavScraper.IsEnabled = false;
+            BtnNavCsv.IsEnabled = false;
+            RdbNormal.IsEnabled = false;
+            RdbHuman.IsEnabled = false;
+
+            _cts = new CancellationTokenSource();
+            BtnStop.IsEnabled = true; // SADECE DURDUR BUTONU AKTİF!
+                                      // ---------------------------------------------------------------
 
             int totalCollectedCount = 0;
 
             // Kullanıcının seçtiği hızı hesapla
             int delayMs = 2000; // Varsayılan (Normal)
             Application.Current.Dispatcher.Invoke(() => {
-                // Ekranda "İnsan Gibi" seçiliyse süreyi 4 saniye yap
                 if (RdbHuman.IsChecked == true)
                 {
                     delayMs = 4000;
                 }
             });
 
-            // UI'daki CheckBox'ları okuyup tek bir listeye atıyoruz (Artık bunu tek tek bool yapmaya gerek kalmadı)
+            // UI'daki CheckBox'ları oku
             List<int> allowedStars = new List<int>();
             if (Chk1.IsChecked == true) allowedStars.Add(1);
             if (Chk2.IsChecked == true) allowedStars.Add(2);
@@ -149,25 +160,17 @@ namespace ReviewHarvester
             if (Chk4.IsChecked == true) allowedStars.Add(4);
             if (Chk5.IsChecked == true) allowedStars.Add(5);
 
-            _cts = new CancellationTokenSource();
-            BtnStop.IsEnabled = true; // Durdur butonunu aktif et
-            // --- ARAYÜZÜ KİLİTLE (UI LOCKDOWN) ---
-            BtnStart.IsEnabled = false;
-            BtnSave.IsEnabled = false;
-            BtnSaveJson.IsEnabled = false; // JSON butonunu da kilitliyoruz
-            BtnLoadTxt.IsEnabled = false;
-            TxtUrl.IsEnabled = false;
-            BtnThemeToggle.IsEnabled = false;
-            BtnNavScraper.IsEnabled = false; // Yan menüyü kilitle
-            BtnNavCsv.IsEnabled = false;     // Yan menüyü kilitle
+            if (allowedStars.Count == 0) allowedStars = new List<int> { 1, 2, 3, 4, 5 };
+            allowedStars = allowedStars.OrderByDescending(x => x).ToList();
 
-            // Hız ayarları ve filtreleri de kilitlemek istersen:
-            RdbNormal.IsEnabled = false;
-            RdbHuman.IsEnabled = false;
-            // -------------------------------------
+            // --- YEDEKLEME İÇİN OTURUM DOSYASINI HAZIRLA ---
+            string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
+            if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
 
-            _cts = new CancellationTokenSource();
-            BtnStop.IsEnabled = true; // SADECE DURDUR BUTONU AKTİF!
+            // Sadece başlatmaya basıldığında saniyesine kadar benzersiz bir isim üret
+            _currentBackupFilePath = Path.Combine(backupDir, $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+            // -----------------------------------------------
+
             try
             {
                 for (int i = 0; i < _targetUrls.Count; i++)
@@ -178,20 +181,34 @@ namespace ReviewHarvester
                     TxtUrl.Text = currentUrl;
                     PrgStatus.IsIndeterminate = true;
 
-                    // 1. İLGİLİ SİTE İÇİN DOĞRU MOTORU (SCRAPER) AL
+                    // 1. DOĞRU MOTORU (SCRAPER) AL
                     IReviewScraper scraper = ScraperFactory.GetScraper(currentUrl);
 
-                    // 2. HASADI BAŞLAT VE EKRANI ANLIK GÜNCELLE
+                    // 2. HASADI BAŞLAT
                     int countFromThisUrl = await scraper.ScrapeAsync(currentUrl, allowedStars,
-                        review => 
-                        { 
-                            Application.Current.Dispatcher.Invoke(() => HarvestedReviews.Add(review)); 
+                        review =>
+                        {
+                            // İŞTE KRİTİK DÜZELTME: İki işlemi de süslü parantez içine aldık!
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                HarvestedReviews.Add(review);
+                                LstReviews.ScrollIntoView(review);
+                                if (HarvestedReviews.Count % 50 == 0)
+                                {
+                                    AutoSaveReviews();
+                                    // Opsiyonel: Durum çubuğunda kısa bir bildirim göster
+                                    TxtStatus.Text = $"(Otomatik Yedek Alındı) {TxtStatus.Text}";
+                                }
+                            });
                         },
-                        statusMessage => 
-                        { 
-                            Application.Current.Dispatcher.Invoke(() => TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}"); 
+                        statusMessage =>
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                TxtStatus.Text = $"{statusMessage} Toplanan: {totalCollectedCount}";
+                            });
                         },
-                        _cts.Token, // YENİ EKLENEN KISIM
+                        _cts.Token,
                         delayMs
                     );
 
@@ -216,15 +233,13 @@ namespace ReviewHarvester
                 BtnThemeToggle.IsEnabled = true;
                 BtnNavScraper.IsEnabled = true;
                 BtnNavCsv.IsEnabled = true;
-
                 RdbNormal.IsEnabled = true;
                 RdbHuman.IsEnabled = true;
-                // --------------------------
 
                 PrgStatus.IsIndeterminate = false;
                 _targetUrls.Clear();
 
-                BtnStop.IsEnabled = false; // Durdur butonunu tekrar pasif yap
+                BtnStop.IsEnabled = false;
                 _cts?.Dispose();
             }
         }
@@ -307,11 +322,11 @@ namespace ReviewHarvester
         // ==========================================
         private void BtnMergeCsv_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Dosya Seçimi
+            // 1. Dosya Seçimi (Artık hem CSV hem JSON destekliyor)
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
-                Filter = "CSV Dosyaları (*.csv)|*.csv",
-                Title = "Birleştirilecek CSV Dosyalarını Seçin",
+                Filter = "Veri Dosyaları (*.csv;*.json)|*.csv;*.json",
+                Title = "Birleştirilecek Dosyaları Seçin (CSV veya JSON)",
                 Multiselect = true
             };
 
@@ -321,56 +336,108 @@ namespace ReviewHarvester
 
                 if (selectedFiles.Length < 2)
                 {
-                    MessageBox.Show("Birleştirme işlemi için en az 2 adet CSV dosyası seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Birleştirme işlemi için en az 2 adet dosya seçmelisiniz.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                // --- AKILLI İSİMLENDİRME İÇİN ÖN SAYIM ---
-                int totalRows = 0;
-                foreach (var file in selectedFiles)
+                // 2. Akıllı Format Kontrolü: Dosyalar CSV mi, JSON mu?
+                bool hasCsv = selectedFiles.Any(f => f.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+                bool hasJson = selectedFiles.Any(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+
+                if (hasCsv && hasJson)
                 {
-                    // Dosyadaki satır sayısını al ve başlık satırını (-1) çıkar
-                    int lineCount = File.ReadLines(file).Count();
-                    totalRows += (lineCount > 0) ? (lineCount - 1) : 0;
+                    // NLP modeline gidecek verinin bozulmaması için karışık birleştirmeyi reddediyoruz
+                    MessageBox.Show("Lütfen sadece CSV veya sadece JSON dosyalarını kendi aralarında birleştirin. Karışık format seçimi desteklenmiyor.", "Format Uyuşmazlığı", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
 
+                int totalRows = 0;
                 string dateText = DateTime.Now.ToString("yyyyMMdd");
-                // Örnek: Master_5400_Yorum_Birlesik_20260403.csv
-                string smartMasterName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.csv";
-                // ----------------------------------------
 
-                // 2. Kayıt Dosyası Hazırlığı
-                SaveFileDialog saveFileDialog = new SaveFileDialog
+                // ==========================================
+                // SENARYO A: CSV BİRLEŞTİRME
+                // ==========================================
+                if (hasCsv)
                 {
-                    Filter = "CSV Dosyası (*.csv)|*.csv",
-                    Title = "Birleştirilmiş Master Dosyayı Kaydet",
-                    FileName = smartMasterName // Akıllı ismimizi buraya verdik
-                };
+                    foreach (var file in selectedFiles)
+                    {
+                        int lineCount = File.ReadLines(file).Count();
+                        totalRows += (lineCount > 0) ? (lineCount - 1) : 0; // Başlıkları düş
+                    }
 
-                if (saveFileDialog.ShowDialog() == true)
+                    SaveFileDialog saveFileDialog = new SaveFileDialog
+                    {
+                        Filter = "CSV Dosyası (*.csv)|*.csv",
+                        Title = "Birleştirilmiş Master CSV'yi Kaydet",
+                        FileName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.csv"
+                    };
+
+                    if (saveFileDialog.ShowDialog() == true)
+                    {
+                        try
+                        {
+                            using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                            {
+                                for (int i = 0; i < selectedFiles.Length; i++)
+                                {
+                                    string[] lines = File.ReadAllLines(selectedFiles[i]);
+                                    int startLine = (i == 0) ? 0 : 1; // Sadece ilk dosyanın başlığını(header) al
+
+                                    for (int j = startLine; j < lines.Length; j++)
+                                    {
+                                        writer.WriteLine(lines[j]);
+                                    }
+                                }
+                            }
+                            MessageBox.Show($"{selectedFiles.Length} adet CSV dosyası başarıyla birleştirildi!\nToplam Veri: {totalRows} yorum.", "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"CSV Birleştirme Hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+                // ==========================================
+                // SENARYO B: JSON BİRLEŞTİRME
+                // ==========================================
+                else if (hasJson)
                 {
+                    List<dynamic> combinedJsonData = new List<dynamic>();
+
                     try
                     {
-                        using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName, false, Encoding.UTF8))
+                        foreach (var file in selectedFiles)
                         {
-                            for (int i = 0; i < selectedFiles.Length; i++)
+                            string jsonContent = File.ReadAllText(file);
+                            // Sınıf yapısına bağlı kalmadan esnek (dynamic) olarak listeleri okuyoruz
+                            var data = JsonConvert.DeserializeObject<List<dynamic>>(jsonContent);
+                            if (data != null)
                             {
-                                string[] lines = File.ReadAllLines(selectedFiles[i]);
-                                int startLine = (i == 0) ? 0 : 1;
-
-                                for (int j = startLine; j < lines.Length; j++)
-                                {
-                                    writer.WriteLine(lines[j]);
-                                }
+                                combinedJsonData.AddRange(data);
                             }
                         }
 
-                        MessageBox.Show($"{selectedFiles.Length} adet dosya birleştirildi!\nToplam Veri: {totalRows} yorum.",
-                                        "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        totalRows = combinedJsonData.Count;
+
+                        SaveFileDialog saveFileDialog = new SaveFileDialog
+                        {
+                            Filter = "JSON Dosyası (*.json)|*.json",
+                            Title = "Birleştirilmiş Master JSON'u Kaydet",
+                            FileName = $"Master_{totalRows}_Yorum_Birlesik_{dateText}.json"
+                        };
+
+                        if (saveFileDialog.ShowDialog() == true)
+                        {
+                            // Tüm listeyi tekrar tek bir JSON array'i olarak formatlı şekilde yazıyoruz
+                            string finalJson = JsonConvert.SerializeObject(combinedJsonData, Formatting.Indented);
+                            File.WriteAllText(saveFileDialog.FileName, finalJson, Encoding.UTF8);
+
+                            MessageBox.Show($"{selectedFiles.Length} adet JSON dosyası başarıyla birleştirildi!\nToplam Veri: {totalRows} yorum.", "İşlem Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Hata: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"JSON Birleştirme Hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -426,6 +493,23 @@ namespace ReviewHarvester
                 {
                     MessageBox.Show($"Kayıt sırasında hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        private void AutoSaveReviews()
+        {
+            try
+            {
+                // Eğer yol boşsa (bir hata olduysa) çık
+                if (string.IsNullOrEmpty(_currentBackupFilePath)) return;
+
+                // O ana kadar toplanan tüm listeyi JSON'a çevir ve SABİT dosyanın ÜZERİNE YAZ
+                string json = JsonConvert.SerializeObject(HarvestedReviews, Formatting.Indented);
+                File.WriteAllText(_currentBackupFilePath, json, Encoding.UTF8);
+            }
+            catch
+            {
+                // Yedekleme arka planda sessizce başarısız olabilir, kullanıcıyı rahatsız etmeyelim
             }
         }
     }
