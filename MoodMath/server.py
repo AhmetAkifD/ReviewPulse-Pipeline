@@ -6,6 +6,9 @@ from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import io
+import base64
+from wordcloud import WordCloud
 
 import data_cleaner
 import stopword_remover
@@ -23,6 +26,16 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def serve_frontend():
     with open("templates/index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+def generate_wordcloud_base64(text, colormap):
+    if not text.strip():
+        return None
+    wc = WordCloud(width=600, height=400, background_color="rgba(255,255,255,0)", mode="RGBA", colormap=colormap)
+    wc.generate(text)
+    img = wc.to_image()
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 @app.post("/api/upload-clean")
 async def upload_clean(file: UploadFile = File(...)):
@@ -44,17 +57,29 @@ async def upload_clean(file: UploadFile = File(...)):
         # 2. Stopword Remover
         stopword_remover.run_nltk_cleaning()
 
-        # 3. Read metrics
-        final_df = pd.read_csv("CSV/cleaned_reviews.csv")
+        # 3. Read metrics from NLP Ready
+        final_df = pd.read_csv("CSV/nlp_ready_reviews.csv")
         total_reviews = len(final_df)
-        pos_count = len(final_df[final_df['Sentiment'] == 1])
-        neg_count = len(final_df[final_df['Sentiment'] == 0])
+        
+        pos_df = final_df[final_df['Sentiment'] == 1]
+        neg_df = final_df[final_df['Sentiment'] == 0]
+        
+        pos_count = len(pos_df)
+        neg_count = len(neg_df)
+
+        pos_text = " ".join(pos_df['NLP_Ready_Comment'].astype(str))
+        neg_text = " ".join(neg_df['NLP_Ready_Comment'].astype(str))
+        
+        pos_wc = generate_wordcloud_base64(pos_text, "Greens")
+        neg_wc = generate_wordcloud_base64(neg_text, "Reds")
 
         return {
             "message": "Temizlik ve NLP hazırlığı başarıyla tamamlandı!",
             "total": total_reviews,
             "pos": pos_count,
-            "neg": neg_count
+            "pos_wc": pos_wc,
+            "neg": neg_count,
+            "neg_wc": neg_wc
         }
 
     except Exception as e:

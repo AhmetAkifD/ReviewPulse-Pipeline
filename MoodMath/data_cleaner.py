@@ -5,8 +5,24 @@ import os
 # Artık fonksiyonumuz dışarıdan bir 'df' (Dataframe) kabul ediyor!
 def run_cleaner(df):
 
+    # Emoji Sözlüğü
+    emoji_dict = {
+        "😊": " mutlu ", "😀": " mutlu ", "😃": " mutlu ", "😁": " mutlu ", "😆": " komik ", "😂": " komik ",
+        "🤣": " komik ", "🥰": " sevgi ", "😍": " harika ", "🤩": " harika ", "😘": " öpücük ", "😗": " öpücük ",
+        "🤍": " kalp ", "❤️": " kalp ", "💕": " kalp ", "💖": " kalp ", "💗": " kalp ", "💙": " kalp ",
+        "👍": " onay ", "👌": " tamam ", "👏": " tebrik ", "🙌": " kutlama ", "🤝": " anlaşma ",
+        "🔥": " harika ", "✨": " parıltı ", "🌟": " yıldız ", "💯": " mükemmel ", 
+        "😔": " üzgün ", "😞": " üzgün ", "😟": " endişeli ", "😠": " kızgın ", "😡": " kızgın ", "🤬": " küfür ",
+        "😭": " ağlama ", "😢": " ağlama ", "💔": " kırık_kalp ", "👎": " ret ", "🤦": " hayal_kırıklığı ",
+        "🗑️": " çöp ", "💩": " kötü ", "🤮": " iğrenç ", "🤢": " iğrenç "
+    }
+
     def clean_text(text):
         if type(text) != str: return ""
+        # Emojileri metne çevir
+        for emoji_char, word_meaning in emoji_dict.items():
+            text = text.replace(emoji_char, word_meaning)
+            
         text = text.replace('İ', 'i').replace('I', 'ı')
         text = text.lower()
         text = re.sub(r'[^a-zçğıöşü\s]', ' ', text)

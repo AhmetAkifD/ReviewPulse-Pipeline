@@ -66,6 +66,15 @@ document.getElementById('btnClean').addEventListener('click', async () => {
         document.getElementById('valPos').innerText = data.pos;
         document.getElementById('valNeg').innerText = data.neg;
 
+        if (data.pos_wc) {
+            document.getElementById('imgPosWc').src = "data:image/png;base64," + data.pos_wc;
+            document.getElementById('imgPosWc').style.display = 'block';
+        }
+        if (data.neg_wc) {
+            document.getElementById('imgNegWc').src = "data:image/png;base64," + data.neg_wc;
+            document.getElementById('imgNegWc').style.display = 'block';
+        }
+
         // Render Chart.js
         if(currentChart) currentChart.destroy();
         const ctx = document.getElementById('chartSentiment').getContext('2d');
