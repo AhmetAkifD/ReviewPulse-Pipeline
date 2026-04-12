@@ -127,12 +127,13 @@ elif menu == "2. Model Eğitimi & Ayarlar":
         with st.spinner("Model eğitiliyor..."):
             result = model_trainer.run_training(max_features=max_feat, test_size=test_ratio)
 
-            if isinstance(result, tuple):
+            if isinstance(result, tuple) and result[0] is not None:
                 accuracy, _ = result
                 st.success("Eğitim Başarılı! Model hafızaya kaydedildi.")
                 st.metric("Sınav Başarısı (Accuracy)", f"% {accuracy * 100:.2f}")
             else:
-                st.error(result)
+                error_msg = result[1] if isinstance(result, tuple) else result
+                st.error(error_msg)
 
 # --- 3. SAYFA: TOPLU ANALİZ ---
 elif menu == "3. Toplu Analiz (JSON/CSV)":
