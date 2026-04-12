@@ -23,25 +23,20 @@ menu = st.sidebar.radio("İşlem Seçiniz:",
                          "3. Toplu Analiz (JSON/CSV)",
                          "4. Canlı Test & Şeffaf Analiz"))
 
-# --- KRİTİK: YENİ OTURUMDA ESKİ DOSYALARI SİL ---
 if 'ilk_acilis' not in st.session_state:
-    # Bu blok site her yenilendiğinde veya yeni sekmede açıldığında BİR KEZ çalışır
     if os.path.exists("CSV"):
-        # CSV klasörünün içindekileri temizle (Klasörü silip tekrar oluşturmak en hızlısı)
         shutil.rmtree("CSV")
         os.makedirs("CSV")
 
-    # Hafıza değişkenlerini sıfırla
     st.session_state.analiz_hazir = False
     st.session_state.ilk_acilis = True
 
 # --- 1. SAYFA: VERİ GÖRSELLEŞTİRME VE TEMİZLİK ---
 if menu == "1. Veri Boru Hattı & Metrikler":
     st.title("📊 Veri Ön İşleme ve Metrikler")
-    st.write("C# Harvester ile topladığınız Master veriyi yükleyin ve NLP'ye hazırlayın.")
+    st.write("Verinizi yükleyin ve NLP'ye hazırlayın.")
 
-    # YENİ: DİNAMİK DOSYA YÜKLEYİCİ (Hem CSV hem JSON destekli)
-    uploaded_raw_file = st.file_uploader("C# Harvester'dan çıkan Master dosyanızı yükleyin:", type=['csv', 'json'])
+    uploaded_raw_file = st.file_uploader("Dosyanızı yükleyin (CSV veya JSON):", type=['csv', 'json'])
 
     # Eğer kullanıcı bir dosya yüklediyse butonlar aktif olacak
     if uploaded_raw_file is not None:
@@ -58,8 +53,6 @@ if menu == "1. Veri Boru Hattı & Metrikler":
             if st.button("Yüklenen Veriyi Temizle", use_container_width=True):
                 with st.spinner("Temizleniyor..."):
                     data_cleaner.run_cleaner(raw_df)
-
-                    # YENİ: Temizlik bittiği an grafikleri aktif et!
                     st.session_state.grafikleri_goster = True
 
                 st.success("Temizlik Tamam!")
@@ -77,53 +70,44 @@ if menu == "1. Veri Boru Hattı & Metrikler":
     st.markdown("---")
     st.subheader("📌 Güncel Veri Seti Özeti")
 
-    # YENİ: Sadece butona basıldıysa grafikleri çiz
+    # Sadece butona basıldıysa grafikleri çiz
     if st.session_state.grafikleri_goster:
         try:
             df = pd.read_csv("CSV/cleaned_reviews.csv")
 
-            # ... Burada senin mevcut olan metrik (total_reviews)
-            # ve Plotly (fig) kodların olduğu gibi kalacak ...
+            # Metrikler (Dashboard)
+            total_reviews = len(df)
+            pos_count = len(df[df['Sentiment'] == 1])
+            neg_count = len(df[df['Sentiment'] == 0])
 
-        except:
-            st.warning("Veri okurken bir hata oluştu.")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Toplam Yorum", f"{total_reviews:,}")
+            c2.metric("Pozitif Yorum", f"{pos_count:,}", f"{(pos_count / total_reviews) * 100:.1f}%")
+            c3.metric("Negatif Yorum", f"{neg_count:,}", f"-{(neg_count / total_reviews) * 100:.1f}%")
+
+            # Plotly Express ile Şık Grafik
+            st.write("**Duygu Dağılım Grafiği**")
+            df_chart = pd.DataFrame({
+                "Duygu": ["Negatif", "Pozitif"],
+                "Yorum Sayısı": [neg_count, pos_count]
+            })
+
+            fig = px.bar(
+                df_chart,
+                x="Duygu",
+                y="Yorum Sayısı",
+                color="Duygu",
+                color_discrete_map={"Negatif": "#ff4b4b", "Pozitif": "#21c354"},
+                text="Yorum Sayısı"
+            )
+            fig.update_traces(width=0.3, textposition='outside')
+            fig.update_layout(xaxis_tickangle=0, showlegend=False, margin=dict(t=30, b=10, l=10, r=10), height=400)
+
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.warning("Grafikleri görmek için 1. ve 2. adımları tamamlayarak veriyi hazır hale getirin.")
     else:
-        # Yeni sekmeyle girildiğinde ekranda bu yazacak:
         st.info("Lütfen yeni bir dosya yükleyip 'Temizle' butonuna basarak analizleri başlatın.")
-    try:
-        df = pd.read_csv("CSV/cleaned_reviews.csv")
-
-        # Metrikler (Dashboard)
-        total_reviews = len(df)
-        pos_count = len(df[df['Sentiment'] == 1])
-        neg_count = len(df[df['Sentiment'] == 0])
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Toplam Yorum", f"{total_reviews:,}")
-        c2.metric("Pozitif Yorum", f"{pos_count:,}", f"{(pos_count / total_reviews) * 100:.1f}%")
-        c3.metric("Negatif Yorum", f"{neg_count:,}", f"-{(neg_count / total_reviews) * 100:.1f}%")
-
-        # Plotly Express ile Şık Grafik
-        st.write("**Duygu Dağılım Grafiği**")
-        df_chart = pd.DataFrame({
-            "Duygu": ["Negatif", "Pozitif"],
-            "Yorum Sayısı": [neg_count, pos_count]
-        })
-
-        fig = px.bar(
-            df_chart,
-            x="Duygu",
-            y="Yorum Sayısı",
-            color="Duygu",
-            color_discrete_map={"Negatif": "#ff4b4b", "Pozitif": "#21c354"},
-            text="Yorum Sayısı"
-        )
-        fig.update_traces(width=0.3, textposition='outside')
-        fig.update_layout(xaxis_tickangle=0, showlegend=False, margin=dict(t=30, b=10, l=10, r=10), height=400)
-
-        st.plotly_chart(fig, use_container_width=True)
-    except:
-        st.warning("Grafikleri görmek için 1. ve 2. adımları tamamlayarak veriyi hazır hale getirin.")
 
 # --- 2. SAYFA: HİPERPARAMETRE KONTROL PANELİ ---
 elif menu == "2. Model Eğitimi & Ayarlar":
@@ -140,7 +124,7 @@ elif menu == "2. Model Eğitimi & Ayarlar":
                                help="%20 seçilirse verinin %80'i eğitim, %20'si sınav için ayrılır.")
 
     if st.button("🚀 Modeli Bu Ayarlarla Eğit", type="primary"):
-        with st.spinner("Makine ders çalışıyor..."):
+        with st.spinner("Model eğitiliyor..."):
             result = model_trainer.run_training(max_features=max_feat, test_size=test_ratio)
 
             if isinstance(result, tuple):
@@ -150,10 +134,10 @@ elif menu == "2. Model Eğitimi & Ayarlar":
             else:
                 st.error(result)
 
-# --- 3. SAYFA: ŞEFFAF YAPAY ZEKA (AÇIKLANABİLİRLİK) ---
+# --- 3. SAYFA: TOPLU ANALİZ ---
 elif menu == "3. Toplu Analiz (JSON/CSV)":
     st.title("📂 Toplu Veri Analizi")
-    st.write("C# Harvester ile topladığınız dosyaları yükleyin, saniyeler içinde analiz edelim.")
+    st.write("Dosyalarınızı yükleyin ve model ile toplu analiz gerçekleştirin.")
 
     uploaded_file = st.file_uploader("Bir JSON veya CSV dosyası seçin", type=['json', 'csv'])
 
@@ -174,7 +158,7 @@ elif menu == "3. Toplu Analiz (JSON/CSV)":
                 vectorizer = joblib.load("Model/mood_vectorizer.pkl")
 
                 # Tahmin yap (Yorum sütununun isminin 'Comment' olduğunu varsayıyoruz)
-                with st.spinner("Yapay zeka binlerce satırı okuyor..."):
+                with st.spinner("Analiz ediliyor..."):
                     # Temizlik fonksiyonunu burada tekrar çağırabiliriz
                     df_new['Cleaned'] = df_new['Comment'].apply(lambda x: str(x).lower())
                     X_new = vectorizer.transform(df_new['Cleaned'])
@@ -191,7 +175,7 @@ elif menu == "3. Toplu Analiz (JSON/CSV)":
 # --- 4. SAYFA: CANLI TEST VE ŞEFFAF YAPAY ZEKA ---
 elif menu == "4. Canlı Test & Şeffaf Analiz":
     st.title("🎯 Canlı Test ve Model Kararları")
-    st.write("Kendi cümlenizi yazın, yapay zeka anında analiz etsin ve kararının nedenini açıklasın!")
+    st.write("Metninizi yazın ve yapay zekanın analiz edip neden bu kararı verdiğini görün.")
 
     user_input = st.text_area("Test etmek istediğiniz yorumu buraya yazın:",
                               placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim...")
@@ -207,7 +191,7 @@ elif menu == "4. Canlı Test & Şeffaf Analiz":
             model = joblib.load("Model/mood_model.pkl")
             vectorizer = joblib.load("Model/mood_vectorizer.pkl")
 
-            with st.spinner("Yapay zeka cümleyi okuyor..."):
+            with st.spinner("Cümle analiz ediliyor..."):
                 # Kullanıcının metnini küçük harfe çevirip vektöre (sayılara) dönüştür
                 # (İdealde kök bulucu da eklenebilir ama basit canlı test için yeterli)
                 input_vector = vectorizer.transform([user_input.lower()])
@@ -228,16 +212,14 @@ elif menu == "4. Canlı Test & Şeffaf Analiz":
 
                 # 2. BÖLÜM: ŞEFFAF ANALİZ (XAI)
                 st.markdown("#### 🔍 Şeffaf Analiz (Model Neden Bu Kararı Verdi?)")
-                st.write(
-                    "Model, devasa hafızasında (Sözlük) bu cümleye ait şu kelimeleri/kalıpları yakaladı ve kararını bunlara bakarak verdi:")
+                st.write("Modelin bu kararı verirken dikkat ettiği kelimeler:")
 
                 # Vektörün içindeki boş olmayan (modelin tanıdığı) kelimeleri bul
                 feature_names = vectorizer.get_feature_names_out()
                 nonzero_indices = input_vector.nonzero()[1]
 
                 if len(nonzero_indices) == 0:
-                    st.info(
-                        "🤔 Model bu cümlede bildiği hiçbir kelimeyi bulamadı. Kararı muhtemelen rastgele veya varsayılan ağırlıklara göre verdi. Lütfen modelin kelime dağarcığını (2. Sayfa) genişletin veya daha net kelimeler kullanın.")
+                    st.info("🤔 Model bu cümlede tanıdığı bir kelime bulamadı. Lütfen daha net kelimeler kullanın veya modelin kelime dağarcığını genişletin.")
                 else:
                     # Modelin tanıdığı kelimeleri listele
                     words_found = [feature_names[i] for i in nonzero_indices]

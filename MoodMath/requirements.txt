@@ -1,0 +1,10 @@
+streamlit
+pandas>=2.0.0
+plotly
+matplotlib
+wordcloud
+scikit-learn
+joblib
+nltk
+TurkishStemmer
+numpy<2

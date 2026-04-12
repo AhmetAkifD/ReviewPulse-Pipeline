@@ -5,14 +5,11 @@ from TurkishStemmer import TurkishStemmer  # YENİ: NLTK yerine saf Türkçe kö
 
 
 def run_nltk_cleaning():
-    print("\n--- 2. AŞAMA: Stop-words Ayıklaması ve Kök Bulma Başlıyor ---")
-
     file_path = "CSV/cleaned_reviews.csv"
     try:
         df = pd.read_csv(file_path, encoding='utf-8')
     except FileNotFoundError:
-        print(f"Hata: Önce 1. aşamayı çalıştırıp '{file_path}' dosyasını oluşturmalısın!")
-        return
+        raise FileNotFoundError(f"Hata: '{file_path}' dosyası bulunamadı. Lütfen önce 1. aşamayı tamamlayın.")
 
     # Kütüphaneleri ve kelimeleri hazırla
     nltk.download('stopwords', quiet=True)
@@ -48,4 +45,3 @@ def run_nltk_cleaning():
 
     final_file_path = "CSV/nlp_ready_reviews.csv"
     df.to_csv(final_file_path, index=False, encoding='utf-8')
-    print(f"2. Aşama Tamamlandı! Köklerine ayrılmış NLP verisi '{final_file_path}' olarak kaydedildi.\n")

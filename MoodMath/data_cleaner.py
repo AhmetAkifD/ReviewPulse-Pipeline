@@ -4,7 +4,6 @@ import os
 
 # Artık fonksiyonumuz dışarıdan bir 'df' (Dataframe) kabul ediyor!
 def run_cleaner(df):
-    print("\n--- 1. AŞAMA: Ham Veri Temizliği Başlıyor ---")
 
     def clean_text(text):
         if type(text) != str: return ""
@@ -29,4 +28,3 @@ def run_cleaner(df):
 
     cleaned_file_path = "CSV/cleaned_reviews.csv"
     df.to_csv(cleaned_file_path, index=False, encoding='utf-8')
-    print(f"1. Aşama Tamamlandı! Veri '{cleaned_file_path}' olarak kaydedildi.\n")
