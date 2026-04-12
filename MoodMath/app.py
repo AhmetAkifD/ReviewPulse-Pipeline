@@ -1,3 +1,4 @@
+import shutil
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -11,6 +12,9 @@ import model_trainer
 
 st.set_page_config(page_title="MoodMath NLP", page_icon="🧠", layout="wide")
 
+if 'grafikleri_goster' not in st.session_state:
+    st.session_state.grafikleri_goster = False
+
 st.sidebar.title("🧠 MoodMath Paneli")
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("İşlem Seçiniz:",
@@ -19,28 +23,73 @@ menu = st.sidebar.radio("İşlem Seçiniz:",
                          "3. Toplu Analiz (JSON/CSV)",
                          "4. Canlı Test & Şeffaf Analiz"))
 
+# --- KRİTİK: YENİ OTURUMDA ESKİ DOSYALARI SİL ---
+if 'ilk_acilis' not in st.session_state:
+    # Bu blok site her yenilendiğinde veya yeni sekmede açıldığında BİR KEZ çalışır
+    if os.path.exists("CSV"):
+        # CSV klasörünün içindekileri temizle (Klasörü silip tekrar oluşturmak en hızlısı)
+        shutil.rmtree("CSV")
+        os.makedirs("CSV")
+
+    # Hafıza değişkenlerini sıfırla
+    st.session_state.analiz_hazir = False
+    st.session_state.ilk_acilis = True
+
 # --- 1. SAYFA: VERİ GÖRSELLEŞTİRME VE TEMİZLİK ---
 if menu == "1. Veri Boru Hattı & Metrikler":
     st.title("📊 Veri Ön İşleme ve Metrikler")
-    st.write("Ham verilerinizi NLP'ye hazırlayın ve genel tabloya göz atın.")
+    st.write("C# Harvester ile topladığınız Master veriyi yükleyin ve NLP'ye hazırlayın.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Adım 1: Temizlik (Regex)")
-        if st.button("Ham Veriyi Temizle", use_container_width=True):
-            with st.spinner("Temizleniyor..."):
-                data_cleaner.run_cleaner()
-            st.success("Temizlik Tamam!")
+    # YENİ: DİNAMİK DOSYA YÜKLEYİCİ (Hem CSV hem JSON destekli)
+    uploaded_raw_file = st.file_uploader("C# Harvester'dan çıkan Master dosyanızı yükleyin:", type=['csv', 'json'])
 
-    with col2:
-        st.subheader("Adım 2: NLTK Stopwords")
-        if st.button("Etkisiz Kelimeleri Ayıkla", use_container_width=True):
-            with st.spinner("Ayıklanıyor..."):
-                stopword_remover.run_nltk_cleaning()
-            st.success("NLP'ye Hazır!")
+    # Eğer kullanıcı bir dosya yüklediyse butonlar aktif olacak
+    if uploaded_raw_file is not None:
+        if uploaded_raw_file.name.endswith('.json'):
+            raw_df = pd.read_json(uploaded_raw_file)
+        else:
+            raw_df = pd.read_csv(uploaded_raw_file)
+
+        st.success(f"{len(raw_df)} satırlık veri başarıyla hafızaya alındı!")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Adım 1: Temizlik (Regex)")
+            if st.button("Yüklenen Veriyi Temizle", use_container_width=True):
+                with st.spinner("Temizleniyor..."):
+                    data_cleaner.run_cleaner(raw_df)
+
+                    # YENİ: Temizlik bittiği an grafikleri aktif et!
+                    st.session_state.grafikleri_goster = True
+
+                st.success("Temizlik Tamam!")
+
+        with col2:
+            st.subheader("Adım 2: NLTK Stopwords")
+            if st.button("Etkisiz Kelimeleri Ayıkla", use_container_width=True):
+                with st.spinner("Ayıklanıyor..."):
+                    stopword_remover.run_nltk_cleaning()
+                st.success("NLP'ye Hazır!")
+
+    else:
+        st.info("İşleme başlamak için lütfen yukarıdan bir veri seti yükleyin.")
 
     st.markdown("---")
     st.subheader("📌 Güncel Veri Seti Özeti")
+
+    # YENİ: Sadece butona basıldıysa grafikleri çiz
+    if st.session_state.grafikleri_goster:
+        try:
+            df = pd.read_csv("CSV/cleaned_reviews.csv")
+
+            # ... Burada senin mevcut olan metrik (total_reviews)
+            # ve Plotly (fig) kodların olduğu gibi kalacak ...
+
+        except:
+            st.warning("Veri okurken bir hata oluştu.")
+    else:
+        # Yeni sekmeyle girildiğinde ekranda bu yazacak:
+        st.info("Lütfen yeni bir dosya yükleyip 'Temizle' butonuna basarak analizleri başlatın.")
     try:
         df = pd.read_csv("CSV/cleaned_reviews.csv")
 
@@ -54,45 +103,27 @@ if menu == "1. Veri Boru Hattı & Metrikler":
         c2.metric("Pozitif Yorum", f"{pos_count:,}", f"{(pos_count / total_reviews) * 100:.1f}%")
         c3.metric("Negatif Yorum", f"{neg_count:,}", f"-{(neg_count / total_reviews) * 100:.1f}%")
 
-        # Görselleştirme
+        # Plotly Express ile Şık Grafik
         st.write("**Duygu Dağılım Grafiği**")
-        chart_data = pd.DataFrame({"Yorum Sayısı": [neg_count, pos_count]}, index=["Negatif", "Pozitif"])
-        # --- GÜNCEL VE ŞIK GRAFİK (PLOTLY) ---
-        st.markdown("---")
-        st.write("**Duygu Dağılım Grafiği**")
-
-        # Grafik için veriyi hazırlıyoruz
         df_chart = pd.DataFrame({
             "Duygu": ["Negatif", "Pozitif"],
             "Yorum Sayısı": [neg_count, pos_count]
         })
 
-        # Plotly Express ile grafiği çiziyoruz
         fig = px.bar(
             df_chart,
             x="Duygu",
             y="Yorum Sayısı",
             color="Duygu",
-            color_discrete_map={"Negatif": "#ff4b4b", "Pozitif": "#21c354"},  # Özel renkler
-            text="Yorum Sayısı"  # Sütunların üstüne rakamları yaz
+            color_discrete_map={"Negatif": "#ff4b4b", "Pozitif": "#21c354"},
+            text="Yorum Sayısı"
         )
+        fig.update_traces(width=0.3, textposition='outside')
+        fig.update_layout(xaxis_tickangle=0, showlegend=False, margin=dict(t=30, b=10, l=10, r=10), height=400)
 
-        # Tasarım İnce Ayarları
-        fig.update_traces(
-            width=0.3,  # Sütun kalınlığı (0.3 çok daha ince ve zarif durur)
-            textposition='outside'  # Rakamları sütunun üstüne koy
-        )
-        fig.update_layout(
-            xaxis_tickangle=0,  # X eksenindeki yazıları (Negatif/Pozitif) tam yatay yap
-            showlegend=False,  # Yanda gereksiz kutucuk (legend) çıkmasın
-            margin=dict(t=30, b=10, l=10, r=10),  # Kenar boşluklarını daralt
-            height=400  # Grafiğin genel boyu
-        )
-
-        # Grafiği Streamlit'e bas
         st.plotly_chart(fig, use_container_width=True)
     except:
-        st.info("Metrikleri görmek için lütfen önce veriyi temizleyin.")
+        st.warning("Grafikleri görmek için 1. ve 2. adımları tamamlayarak veriyi hazır hale getirin.")
 
 # --- 2. SAYFA: HİPERPARAMETRE KONTROL PANELİ ---
 elif menu == "2. Model Eğitimi & Ayarlar":

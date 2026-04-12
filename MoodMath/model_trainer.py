@@ -20,14 +20,14 @@ def run_training(max_features=5000, test_size=0.2):
     Y = df['Sentiment']
 
     # 1. Slider'dan gelen 'max_features' değerine göre vektörize ediyoruz
-    vectorizer = TfidfVectorizer(max_features=max_features)
+    vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=(1, 2))
     X_vectorized = vectorizer.fit_transform(X)
 
     # 2. Slider'dan gelen 'test_size' değerine göre bölüyoruz
     X_train, X_test, Y_train, Y_test = train_test_split(X_vectorized, Y, test_size=test_size, random_state=42)
 
     # 3. Model Eğitimi
-    model = LogisticRegression()
+    model = LogisticRegression(class_weight='balanced')
     model.fit(X_train, Y_train)
 
     # 4. Sınav
