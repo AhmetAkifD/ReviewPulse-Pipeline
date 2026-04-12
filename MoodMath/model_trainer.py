@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import os
 
@@ -39,6 +39,12 @@ def run_training(max_features=5000, test_size=0.2):
     # 4. Sınav
     Y_pred = model.predict(X_test)
     accuracy = accuracy_score(Y_test, Y_pred)
+    report = classification_report(Y_test, Y_pred, output_dict=True)
+    
+    metrics = {
+        "accuracy": accuracy,
+        "report": report
+    }
 
     # 5. MODELİ KAYDETME (Web arayüzü buradan okuyacak)
     if not os.path.exists("Model"):
@@ -47,5 +53,4 @@ def run_training(max_features=5000, test_size=0.2):
     joblib.dump(model, "Model/mood_model.pkl")
     joblib.dump(vectorizer, "Model/mood_vectorizer.pkl")
 
-    # Sonucu ve analiz için dataframe'i geri döndür
-    return accuracy, df
+    return metrics, df

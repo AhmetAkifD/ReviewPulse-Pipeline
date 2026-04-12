@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodMath NLP</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="glow-circle"></div>
+    <div class="glow-circle-2"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="brand">
+            <span>🧠</span> MoodMath
+        </div>
+        <div class="menu-item active" data-target="page1">📊 Veri Boru Hattı</div>
+        <div class="menu-item" data-target="page2">⚙️ Model Eğitimi</div>
+        <div class="menu-item" data-target="page3">📂 Toplu Analiz</div>
+        <div class="menu-item" data-target="page4">🎯 Canlı Test (XAI)</div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Page 1: Pipeline -->
+        <section id="page1" class="section active">
+            <h1>Veri Ön İşleme</h1>
+            <p class="subtitle">Master veriyi yükleyin ve makine öğrenimi için hazırlayın.</p>
+
+            <div class="card">
+                <h3>Dosya Yükleme</h3>
+                <div class="file-drop-area" id="dropArea">
+                    <p>Yüklemek için tıklayın veya sürükleyin (.csv / .json)</p>
+                    <input type="file" id="uploadFileRaw" accept=".csv, .json">
+                </div>
+                <div id="fileInfo1" style="margin-bottom: 1rem; color: var(--primary);"></div>
+                <button id="btnClean"><span class="spinner"></span> Yükle ve Temizle (Pipeline Başlat)</button>
+                <div class="alert" id="alertP1"></div>
+            </div>
+
+            <div class="card" id="dashboard1" style="display: none;">
+                <h3>📌 Güncel Veri Seti Özeti</h3>
+                <div class="metric-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Toplam Yorum</div>
+                        <div class="metric-value" id="valTotal">0</div>
+                    </div>
+                    <div class="metric-box success">
+                        <div class="metric-label">Pozitif Yorum</div>
+                        <div class="metric-value" id="valPos">0</div>
+                    </div>
+                    <div class="metric-box error">
+                        <div class="metric-label">Negatif Yorum</div>
+                        <div class="metric-value" id="valNeg">0</div>
+                    </div>
+                </div>
+                <div style="position: relative; height: 350px; width: 100%; margin-top: 1.5rem;">
+                    <canvas id="chartSentiment"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 2: Training -->
+        <section id="page2" class="section">
+            <h1>Yapay Zeka Model Eğitimi</h1>
+            <p class="subtitle">Hiperparametreleri ayarlayın ve modeli eğitin.</p>
+            
+            <div class="card">
+                <h3>🎛️ Kontrol Paneli</h3>
+                <div class="flex-row">
+                    <div class="col">
+                        <label>Kelime Dağarcığı (Max Features): <span id="featVal">5000</span></label>
+                        <input type="range" id="sliderFeat" min="1000" max="10000" step="500" value="5000">
+                    </div>
+                    <div class="col">
+                        <label>Test Verisi Oranı: <span id="testVal">0.2</span></label>
+                        <input type="range" id="sliderTest" min="0.1" max="0.5" step="0.05" value="0.2">
+                    </div>
+                </div>
+                <button id="btnTrain" style="margin-top: 1rem;"><span class="spinner"></span> 🚀 Modeli Bu Ayarlarla Eğit</button>
+                <div class="alert" id="alertP2"></div>
+            </div>
+
+            <div class="card" id="dashboard2" style="display: none;">
+                <h3>Sınav Başarısı (Genel Accuracy)</h3>
+                <div class="metric-box" style="margin-bottom: 2rem;">
+                    <div class="metric-value" id="accVal">% 0.00</div>
+                </div>
+
+                <h3>📊 Bilimsel Detaylı Metrikler</h3>
+                <div class="flex-row">
+                    <div class="col card" style="box-shadow: none; border-color: var(--success); background: rgba(16,185,129,0.05)">
+                        <h4 style="color: var(--success); margin-bottom: 1rem;">😊 Pozitif Sınıf (1)</h4>
+                        <div id="posMetrics"></div>
+                    </div>
+                    <div class="col card" style="box-shadow: none; border-color: var(--error); background: rgba(239,68,68,0.05)">
+                        <h4 style="color: var(--error); margin-bottom: 1rem;">😡 Negatif Sınıf (0)</h4>
+                        <div id="negMetrics"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 3: Batch -->
+        <section id="page3" class="section">
+            <h1>Toplu Veri Analizi</h1>
+            <p class="subtitle">Yeni verileri model ile baştan sona analiz edin.</p>
+
+            <div class="card">
+                <div class="file-drop-area" id="dropArea2">
+                    <p>JSON veya CSV dosyanızı analiz etmek için buraya bırakın.</p>
+                    <input type="file" id="uploadFileBatch" accept=".csv, .json">
+                </div>
+                <div id="fileInfo2" style="margin-bottom: 1rem; color: var(--primary);"></div>
+                <button id="btnBatch"><span class="spinner"></span> Tümünü Analiz Et</button>
+                <div class="alert" id="alertP3"></div>
+            </div>
+
+            <div class="card" id="dashboard3" style="display: none;">
+                <h3>Analiz Sonuçları Özeti</h3>
+                <button id="btnDownload" style="width: auto; margin-bottom: 1.5rem;">📥 Analiz Sonuçlarını İndir (.CSV)</button>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Yorum</th>
+                                <th>Tahmin Edilen Duygu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 4: XAI -->
+        <section id="page4" class="section">
+            <h1>Canlı Test ve Şeffaf Karar (XAI)</h1>
+            <p class="subtitle">Kendi cümlenizi yazın, yapay zeka analiz etsin ve kararının temel nedenini açıklasın.</p>
+
+            <div class="card">
+                <textarea id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..."></textarea>
+                <button id="btnPredict"><span class="spinner"></span> Cümleyi Analiz Et</button>
+                <div class="alert" id="alertP4"></div>
+            </div>
+
+            <div class="card" id="dashboard4" style="display: none;">
+                <div class="flex-row">
+                    <div class="col">
+                        <h3>Karar Sonucu</h3>
+                        <div class="metric-box" id="predBox">
+                            <div class="metric-value" id="predVal"></div>
+                            <div class="metric-label" id="predConf"></div>
+                        </div>
+                    </div>
+                    <div class="col" style="flex: 2;">
+                        <h3>🔍 Şeffaf Analiz</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">Modelin bu kararı verirken dikkat ettiği (kendi hafızasında bildiği) kelimeler:</p>
+                        <div id="predWords"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
