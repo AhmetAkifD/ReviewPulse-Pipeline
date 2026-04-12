@@ -20,7 +20,13 @@ def run_training(max_features=5000, test_size=0.2):
     Y = df['Sentiment']
 
     # 1. Slider'dan gelen 'max_features' değerine göre vektörize ediyoruz
-    vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=(1, 2))
+    # YENİ: Modelin sadece gerçekten ayırt edici ve en az 3 farklı yorumda geçen kelimeleri öğrenmesini sağlıyoruz
+    vectorizer = TfidfVectorizer(
+        max_features=max_features,
+        ngram_range=(1, 2),
+        min_df=3,  # Alt Limit: En az 3 farklı yorumda geçmeyen kelimeleri (yazım hataları, özel isimler) sil
+        max_df=0.85  # Üst Limit: Yorumların %85'inde geçen (aşırı yaygın) kelimeleri sil
+    )
     X_vectorized = vectorizer.fit_transform(X)
 
     # 2. Slider'dan gelen 'test_size' değerine göre bölüyoruz
