@@ -187,3 +187,60 @@ elif menu == "3. Toplu Analiz (JSON/CSV)":
                 # İndirme Butonu
                 csv = df_new.to_csv(index=False).encode('utf-8')
                 st.download_button("Analiz Sonuçlarını İndir (.CSV)", csv, "analiz_sonuclari.csv", "text/csv")
+
+# --- 4. SAYFA: CANLI TEST VE ŞEFFAF YAPAY ZEKA ---
+elif menu == "4. Canlı Test & Şeffaf Analiz":
+    st.title("🎯 Canlı Test ve Model Kararları")
+    st.write("Kendi cümlenizi yazın, yapay zeka anında analiz etsin ve kararının nedenini açıklasın!")
+
+    user_input = st.text_area("Test etmek istediğiniz yorumu buraya yazın:",
+                              placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim...")
+
+    if st.button("Analiz Et", type="primary"):
+        # Model eğitilmiş mi diye kontrol et
+        if not os.path.exists("Model/mood_model.pkl") or not os.path.exists("Model/mood_vectorizer.pkl"):
+            st.error("⚠️ Önce 2. Sayfaya gidip modeli eğitmelisiniz!")
+        elif len(user_input.strip()) < 3:
+            st.warning("Lütfen daha uzun bir cümle yazın.")
+        else:
+            # Modeli ve Sözlüğü yükle
+            model = joblib.load("Model/mood_model.pkl")
+            vectorizer = joblib.load("Model/mood_vectorizer.pkl")
+
+            with st.spinner("Yapay zeka cümleyi okuyor..."):
+                # Kullanıcının metnini küçük harfe çevirip vektöre (sayılara) dönüştür
+                # (İdealde kök bulucu da eklenebilir ama basit canlı test için yeterli)
+                input_vector = vectorizer.transform([user_input.lower()])
+
+                # Tahmin yap ve eminlik oranını (Olasılık) al
+                prediction = model.predict(input_vector)[0]
+                probability = model.predict_proba(input_vector)[0]
+
+                st.markdown("---")
+
+                # 1. BÖLÜM: SONUÇ
+                if prediction == 1:
+                    st.success(f"### 😊 POZİTİF YORUM")
+                    st.write(f"**Yapay Zekanın Eminlik Oranı:** %{probability[1] * 100:.1f}")
+                else:
+                    st.error(f"### 😡 NEGATİF YORUM")
+                    st.write(f"**Yapay Zekanın Eminlik Oranı:** %{probability[0] * 100:.1f}")
+
+                # 2. BÖLÜM: ŞEFFAF ANALİZ (XAI)
+                st.markdown("#### 🔍 Şeffaf Analiz (Model Neden Bu Kararı Verdi?)")
+                st.write(
+                    "Model, devasa hafızasında (Sözlük) bu cümleye ait şu kelimeleri/kalıpları yakaladı ve kararını bunlara bakarak verdi:")
+
+                # Vektörün içindeki boş olmayan (modelin tanıdığı) kelimeleri bul
+                feature_names = vectorizer.get_feature_names_out()
+                nonzero_indices = input_vector.nonzero()[1]
+
+                if len(nonzero_indices) == 0:
+                    st.info(
+                        "🤔 Model bu cümlede bildiği hiçbir kelimeyi bulamadı. Kararı muhtemelen rastgele veya varsayılan ağırlıklara göre verdi. Lütfen modelin kelime dağarcığını (2. Sayfa) genişletin veya daha net kelimeler kullanın.")
+                else:
+                    # Modelin tanıdığı kelimeleri listele
+                    words_found = [feature_names[i] for i in nonzero_indices]
+
+                    # Şık bir şekilde ekrana bas
+                    st.code(", ".join(words_found))
