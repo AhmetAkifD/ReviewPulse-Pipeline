@@ -53,11 +53,11 @@ namespace ReviewHarvester.Scrapers
                     try
                     {
                         // HER BİR YILDIZ İÇİN AYRI AYRI TARAMA YAP (Trendyol'daki mantığın aynısı)
+                        // HER BİR YILDIZ İÇİN AYRI AYRI TARAMA YAP
                         foreach (int currentStar in allowedStars)
                         {
                             if (token.IsCancellationRequested) break;
 
-                            // Amazon'un URL filtre kelimeleri
                             string starText = "all_stars";
                             if (currentStar == 1) starText = "one_star";
                             else if (currentStar == 2) starText = "two_star";
@@ -67,6 +67,14 @@ namespace ReviewHarvester.Scrapers
 
                             int page = 1;
                             bool hasMore = true;
+
+                            // YENİ 1: Yeni sayfaya mı gideceğiz, yoksa aynı sayfada buton mu tıklayacağız kontrolü
+                            bool needsNavigation = true;
+                            int noChangeCounter = 0;
+
+                            // YENİ 2: Aynı sayfada "Daha Fazla" tıkladığımızda eski yorumları tekrar eklememek için Hafıza!
+                            HashSet<string> seenReviews = new HashSet<string>();
+
                             IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
 
                             while (hasMore)
@@ -77,26 +85,29 @@ namespace ReviewHarvester.Scrapers
                                     break;
                                 }
 
-                                // SİHİRLİ URL HACK: Tıklamaya gerek yok, Amazon'a doğrudan "Bana bu puanı ve bu sayfayı ver" diyoruz.
-                                string pageUrl = $"https://www.amazon.{domain}/product-reviews/{asin}/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar={starText}&reviewerType=all_reviews&pageNumber={page}";
-                                onStatusUpdate?.Invoke($"Amazon: {currentStar} Yıldız, Sayfa {page} taranıyor... (Toplanan: {count})");
-
-                                driver.Navigate().GoToUrl(pageUrl);
-                                Thread.Sleep(delayMs);
-
-                                // Güvenlik Duvarı Kontrolü
-                                if (driver.Url.Contains("signin") || driver.Url.Contains("ap/signin") || driver.Title.Contains("Robot"))
+                                // Sadece ilk girişte veya sayfa numarası değiştiğinde URL'yi yenile
+                                if (needsNavigation)
                                 {
-                                    Application.Current.Dispatcher.Invoke(() =>
-                                    {
-                                        MessageBox.Show("Amazon güvenlik duvarı aktif!\n\nLütfen açılan tarayıcı ekranından Amazon hesabınıza giriş yapın (veya Captcha çözün).\n\nGiriş işlemini başarıyla tamamladıktan sonra BU KUTUYA 'Tamam' diyerek devam edin.", "Kullanıcı Müdahalesi Gerekiyor", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                    });
+                                    string pageUrl = $"https://www.amazon.{domain}/product-reviews/{asin}/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar={starText}&reviewerType=all_reviews&pageNumber={page}";
+                                    onStatusUpdate?.Invoke($"Amazon: {currentStar} Yıldız taranıyor... (Toplanan: {count})");
 
                                     driver.Navigate().GoToUrl(pageUrl);
-                                    Thread.Sleep(4000);
+                                    Thread.Sleep(delayMs);
+
+                                    // Güvenlik Duvarı Kontrolü
+                                    if (driver.Url.Contains("signin") || driver.Url.Contains("ap/signin") || driver.Title.Contains("Robot"))
+                                    {
+                                        Application.Current.Dispatcher.Invoke(() =>
+                                        {
+                                            MessageBox.Show("Amazon güvenlik duvarı aktif!\n\nLütfen açılan tarayıcı ekranından Amazon hesabınıza giriş yapın (veya Captcha çözün).\n\nGiriş işlemini başarıyla tamamladıktan sonra BU KUTUYA 'Tamam' diyerek devam edin.", "Kullanıcı Müdahalesi Gerekiyor", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                        });
+
+                                        driver.Navigate().GoToUrl(pageUrl);
+                                        Thread.Sleep(4000);
+                                    }
                                 }
 
-                                // YABANCI YORUM FİLTRELİ JS AJANI
+                                // YABANCI YORUM FİLTRELİ JS AJANI (Senin verdiğin harika kodun aynısı)
                                 string extractionScript = $@"
                                     var results = [];
                                     var reviews = document.querySelectorAll('[data-hook=""review""], .review, .a-section.review');
@@ -104,15 +115,12 @@ namespace ReviewHarvester.Scrapers
                                     for(var i=0; i<reviews.length; i++){{
                                         var r = reviews[i];
                                         
-                                        // 1. YABANCI YORUM FİLTRESİ (Tarih ve Lokasyon kontrolü)
                                         var dateElem = r.querySelector('[data-hook=""review-date""]');
                                         if(dateElem) {{
                                             var dateText = dateElem.innerText.toLowerCase();
-                                            // Yorumun yapıldığı lokasyon 'Türkiye' değilse bu yorumu çöpe at ve sonrakine geç!
                                             if(!dateText.includes('türkiye')) continue;
                                         }}
                                         
-                                        // 2. Metni Al
                                         var textElem = r.querySelector('[data-hook=""review-body""]') || r.querySelector('.review-text') || r.querySelector('.review-text-content');
                                         if(!textElem) continue;
                                         
@@ -120,11 +128,8 @@ namespace ReviewHarvester.Scrapers
                                         text = text.replace('Daha fazlasını oku', '').replace('Read more', '').trim();
                                         if(text.length < 5) continue;
                                         
-                                        // 3. Kullanıcı Adını Al
                                         var userElem = r.querySelector('.a-profile-name');
                                         var user = userElem ? userElem.innerText.trim() : 'Anonim';
-                                        
-                                        // Puanı arayüzden bildiğimiz için URL'den alıyoruz
                                         var star = {currentStar};
                                         
                                         results.push({{ text: text, star: star, user: user }});
@@ -135,39 +140,76 @@ namespace ReviewHarvester.Scrapers
                                 string jsonResult = (string)js.ExecuteScript(extractionScript);
                                 var scrapedData = JsonConvert.DeserializeObject<List<dynamic>>(jsonResult);
 
-                                if (scrapedData == null || scrapedData.Count == 0)
+                                bool addedNew = false;
+                                if (scrapedData != null && scrapedData.Count > 0)
                                 {
-                                    // Sayfada hiç (yerli) yorum kalmadıysa sıradaki yıldıza geç
-                                    hasMore = false;
-                                    break;
-                                }
-
-                                foreach (var item in scrapedData)
-                                {
-                                    string reviewText = item.text.ToString().Replace('\n', ' ');
-                                    int star = (int)item.star;
-                                    string userName = item.user.ToString();
-
-                                    onReviewFound?.Invoke(new Review
+                                    foreach (var item in scrapedData)
                                     {
-                                        User = userName,
-                                        Comment = reviewText,
-                                        Rating = star,
-                                        Source = "Amazon"
-                                    });
-                                    count++;
+                                        string reviewText = item.text.ToString().Replace('\n', ' ');
+
+                                        // KRİTİK: Aynı sayfada butona bastıkça üstteki yorumlar da geleceği için süzgeçten geçiriyoruz
+                                        if (seenReviews.Contains(reviewText)) continue;
+
+                                        seenReviews.Add(reviewText);
+                                        addedNew = true;
+
+                                        int star = (int)item.star;
+                                        string userName = item.user.ToString();
+
+                                        onReviewFound?.Invoke(new Review
+                                        {
+                                            User = userName,
+                                            Comment = reviewText,
+                                            Rating = star,
+                                            Source = "Amazon"
+                                        });
+                                        count++;
+                                    }
                                 }
 
-                                // Amazon'da 'Sonraki Sayfa' butonu aktif mi kontrolü
-                                // JS ajanına diyoruz ki: "nextBtn null değilse VE a-disabled class'ı yoksa true dön, aksi halde false dön."
-                                bool hasNextPage = (bool)js.ExecuteScript("var nextBtn = document.querySelector('li.a-last'); return (nextBtn !== null) && (!nextBtn.classList.contains('a-disabled'));");
-                                if (!hasNextPage)
+                                // Lazy load ve AJAX butonlarının belirmesi için sayfayı en alta kaydır
+                                js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
+                                Thread.Sleep(500);
+
+                                // 1. İHTİMAL: "Daha Fazla Yorum Göster" Butonu Var Mı?
+                                bool clickedShowMore = (bool)js.ExecuteScript(@"
+                                    var btn = document.querySelector('[data-hook=""show-more-button""]');
+                                    if(btn && btn.offsetParent !== null) {
+                                        btn.click();
+                                        return true;
+                                    }
+                                    return false;
+                                ");
+
+                                if (clickedShowMore)
                                 {
-                                    hasMore = false; // Bu yıldızdaki tüm sayfalar bitti
+                                    // Butona tıklandı, URL değişmeyecek. Sayfada kal ve bekle!
+                                    needsNavigation = false;
+                                    Thread.Sleep(delayMs);
+
+                                    // Yabancı yorumlara denk gelirsek C# yeni yorum bulamaz ama buton tıklanmıştır. 
+                                    // 10 kez art arda tıklayıp 1 tane bile Türkçe bulamazsa pes et.
+                                    if (!addedNew) noChangeCounter++;
+                                    else noChangeCounter = 0;
+
+                                    if (noChangeCounter >= 10) hasMore = false;
+
+                                    continue; // Döngü başına dön ve YENİ YÜKLENENLERİ ÇEK!
+                                }
+
+                                // 2. İHTİMAL: Klasik "Sonraki Sayfa" (Next Page) Butonu Var Mı?
+                                bool hasNextPage = (bool)js.ExecuteScript("var nextBtn = document.querySelector('li.a-last'); return (nextBtn !== null) && (!nextBtn.classList.contains('a-disabled'));");
+
+                                if (hasNextPage)
+                                {
+                                    page++;
+                                    needsNavigation = true; // Artık yeni URL'ye gitmemiz lazım
+                                    noChangeCounter = 0;
+                                    seenReviews.Clear(); // Yeni sayfaya geçtiğimiz için hafızayı temizleyebiliriz (RAM tasarrufu)
                                 }
                                 else
                                 {
-                                    page++; // Sonraki sayfaya geç
+                                    hasMore = false; // Ne daha fazla göster butonu var, ne de sonraki sayfa kaldı. Bu yıldız bitti.
                                 }
                             }
                         }
