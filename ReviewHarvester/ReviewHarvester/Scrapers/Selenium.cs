@@ -39,6 +39,11 @@ namespace ReviewHarvester.Scrapers
 
                         while (hasMoreReviews)
                         {
+                            if (token.IsCancellationRequested)
+                            {
+                                onStatusUpdate?.Invoke("İşlem kullanıcı tarafından durduruldu.");
+                                break;
+                            }
                             string pageUrl = $"{baseUrl}?sayfa={page}";
                             driver.Navigate().GoToUrl(pageUrl);
 
