@@ -155,67 +155,13 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
     }
 });
 
-// Page 3: Batch
-const dropArea2 = document.getElementById('dropArea2');
-const uploadBatch = document.getElementById('uploadFileBatch');
-const fileInfo2 = document.getElementById('fileInfo2');
-let currentCSV = null;
-
-dropArea2.addEventListener('click', () => uploadBatch.click());
-uploadBatch.addEventListener('change', () => {
-    if(uploadBatch.files.length > 0) fileInfo2.innerText = "Seçilen dosya: " + uploadBatch.files[0].name;
-});
-
-document.getElementById('btnBatch').addEventListener('click', async () => {
-    if(!uploadBatch.files.length) return showAlert('alertP3', 'error', 'Lütfen bir veri dosyası seçin!');
-    setLoading('btnBatch', true);
-    hideAlert('alertP3');
-    const formData = new FormData();
-    formData.append("file", uploadBatch.files[0]);
-
-    try {
-        const r = await fetch('/api/batch-analyze', { method: 'POST', body: formData });
-        const data = await r.json();
-        
-        if(!r.ok) throw new Error(data.error);
-        
-        showAlert('alertP3', 'success', `${data.total} Kayıt analiz edildi!`);
-        document.getElementById('dashboard3').style.display = 'block';
-        
-        currentCSV = data.csv_string;
-        
-        const tbody = document.getElementById('batchTable');
-        tbody.innerHTML = "";
-        data.preview.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.Comment}</td><td><span class="badge ${row.Duygu.includes('Pozitif')?'pos':'neg'}">${row.Duygu}</span></td>`;
-            tbody.appendChild(tr);
-        });
-    } catch(err) {
-        showAlert('alertP3', 'error', err.message);
-    } finally {
-        setLoading('btnBatch', false);
-    }
-});
-
-document.getElementById('btnDownload').addEventListener('click', () => {
-    if(!currentCSV) return;
-    const blob = new Blob([currentCSV], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'analiz_sonuclari.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-});
-
-// Page 4: Predict
+// Page 3: Predict
 document.getElementById('btnPredict').addEventListener('click', async () => {
     const text = document.getElementById('txtPredict').value;
-    if(text.length < 3) return showAlert('alertP4', 'error', 'Çok kısa metin!');
+    if(text.length < 3) return showAlert('alertP3', 'error', 'Çok kısa metin!');
     
     setLoading('btnPredict', true);
-    hideAlert('alertP4');
+    hideAlert('alertP3');
     try {
         const r = await fetch('/api/predict', {
             method: 'POST',
@@ -225,18 +171,27 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
         const data = await r.json();
         if(!r.ok) throw new Error(data.error);
 
-        document.getElementById('dashboard4').style.display = 'block';
+        document.getElementById('dashboard3').style.display = 'block';
         
         const predBox = document.getElementById('predBox');
-        predBox.className = data.prediction === 1 ? 'metric-box success' : 'metric-box error';
+        const score = data.positivity_score;
         
-        document.getElementById('predVal').innerText = data.prediction === 1 ? 'Pozitif 😊' : 'Negatif 😡';
-        document.getElementById('predConf').innerText = `Eminlik Oranı: %${data.confidence.toFixed(1)}`;
+        if (score >= 50) {
+            predBox.style.borderColor = 'var(--success)';
+            predBox.style.background = 'rgba(16, 185, 129, 0.05)';
+            document.getElementById('predScore').style.color = 'var(--success)';
+        } else {
+            predBox.style.borderColor = 'var(--error)';
+            predBox.style.background = 'rgba(239, 68, 68, 0.05)';
+            document.getElementById('predScore').style.color = 'var(--error)';
+        }
+        
+        document.getElementById('predScore').innerText = `%${score.toFixed(1)}`;
 
         const wordsDiv = document.getElementById('predWords');
         wordsDiv.innerHTML = "";
         if(data.words_found.length === 0) {
-            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">🤔 Model eşleşen bir kelime bulamadı, rastgele/ağırlık bazlı tahmin yapıldı.</div>`;
+            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">🤔 Model eşleşen bir kelime bulamadı, genel ağırlık bazlı tahmin yapıldı.</div>`;
         } else {
             data.words_found.forEach(w => {
                 const sp = document.createElement('span');
@@ -249,7 +204,7 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
             });
         }
     } catch(err) {
-        showAlert('alertP4', 'error', err.message);
+        showAlert('alertP3', 'error', err.message);
     } finally {
         setLoading('btnPredict', false);
     }

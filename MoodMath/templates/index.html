@@ -19,8 +19,7 @@
         </div>
         <div class="menu-item active" data-target="page1">📊 Veri Boru Hattı</div>
         <div class="menu-item" data-target="page2">⚙️ Model Eğitimi</div>
-        <div class="menu-item" data-target="page3">📂 Toplu Analiz</div>
-        <div class="menu-item" data-target="page4">🎯 Canlı Test (XAI)</div>
+        <div class="menu-item" data-target="page3">🎯 Canlı Test (XAI)</div>
     </nav>
 
     <!-- Main Content -->
@@ -116,58 +115,24 @@
             </div>
         </section>
 
-        <!-- Page 3: Batch -->
+        <!-- Page 3: XAI -->
         <section id="page3" class="section">
-            <h1>Toplu Veri Analizi</h1>
-            <p class="subtitle">Yeni verileri model ile baştan sona analiz edin.</p>
-
-            <div class="card">
-                <div class="file-drop-area" id="dropArea2">
-                    <p>JSON veya CSV dosyanızı analiz etmek için buraya bırakın.</p>
-                    <input type="file" id="uploadFileBatch" accept=".csv, .json">
-                </div>
-                <div id="fileInfo2" style="margin-bottom: 1rem; color: var(--primary);"></div>
-                <button id="btnBatch"><span class="spinner"></span> Tümünü Analiz Et</button>
-                <div class="alert" id="alertP3"></div>
-            </div>
-
-            <div class="card" id="dashboard3" style="display: none;">
-                <h3>Analiz Sonuçları Özeti</h3>
-                <button id="btnDownload" style="width: auto; margin-bottom: 1.5rem;">📥 Analiz Sonuçlarını İndir (.CSV)</button>
-                
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Yorum</th>
-                                <th>Tahmin Edilen Duygu</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batchTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- Page 4: XAI -->
-        <section id="page4" class="section">
             <h1>Canlı Test ve Şeffaf Karar (XAI)</h1>
             <p class="subtitle">Kendi cümlenizi yazın, yapay zeka analiz etsin ve kararının temel nedenini açıklasın.</p>
 
             <div class="card">
                 <textarea id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..."></textarea>
                 <button id="btnPredict"><span class="spinner"></span> Cümleyi Analiz Et</button>
-                <div class="alert" id="alertP4"></div>
+                <div class="alert" id="alertP3"></div>
             </div>
 
-            <div class="card" id="dashboard4" style="display: none;">
+            <div class="card" id="dashboard3" style="display: none;">
                 <div class="flex-row">
                     <div class="col">
                         <h3>Karar Sonucu</h3>
-                        <div class="metric-box" id="predBox">
-                            <div class="metric-value" id="predVal"></div>
-                            <div class="metric-label" id="predConf"></div>
+                        <div class="metric-box" id="predBox" style="background: var(--card-bg); border-color: var(--primary);">
+                            <div class="metric-label" style="text-align: center; font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-muted);">Pozitiflik Skoru</div>
+                            <div class="metric-value" id="predScore" style="text-align: center; font-size: 3rem; margin-top: 0.5rem; text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);"></div>
                         </div>
                     </div>
                     <div class="col" style="flex: 2;">
@@ -181,6 +146,6 @@
 
     </main>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=2"></script>
 </body>
 </html>

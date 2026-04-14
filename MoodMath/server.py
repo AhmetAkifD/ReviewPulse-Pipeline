@@ -105,44 +105,7 @@ async def train_model(req: TrainRequest):
         error_msg = result[1] if isinstance(result, tuple) else result
         return JSONResponse(status_code=400, content={"error": error_msg})
 
-@app.post("/api/batch-analyze")
-async def batch_analyze(file: UploadFile = File(...)):
-    if not os.path.exists("Model/mood_model.pkl"):
-        return JSONResponse(status_code=400, content={"error": "Önce model eğitmelisiniz!"})
-    try:
-        # Parse file
-        try:
-            contents = file.file.read()
-            if file.filename.endswith(".json"):
-                df_new = pd.read_json(io.BytesIO(contents))
-            else:
-                df_new = pd.read_csv(io.BytesIO(contents))
-        except ValueError as ve:
-            if "Expected object or value" in str(ve):
-                return JSONResponse(status_code=400, content={"error": "JSON formatı hatası (Expected object or value). Lütfen yüklediğiniz dosyanın geçerli bir formatta olduğuna veya uzantısının doğru olduğuna (.json / .csv) dikkat edin."})
-            return JSONResponse(status_code=400, content={"error": f"Veri okuma hatası: {str(ve)}"})
 
-        model = joblib.load("Model/mood_model.pkl")
-        vectorizer = joblib.load("Model/mood_vectorizer.pkl")
-
-        # Yeni veriyi de aynı temizlik ve stopword (kök bulma vs) işlemlerinden geçir
-        df_new['Cleaned'] = df_new['Comment'].apply(data_cleaner.clean_text).apply(stopword_remover.process_text)
-        X_new = vectorizer.transform(df_new['Cleaned'])
-        df_new['Tahmin'] = model.predict(X_new)
-        df_new['Duygu'] = df_new['Tahmin'].map({1: "Pozitif 😊", 0: "Negatif 😡"})
-        
-        # Prepare for CSV download return (we'll return JSON and front-end handles download)
-        csv_data = df_new.to_csv(index=False)
-        preview = df_new[['Comment', 'Duygu']].head(10).to_dict(orient="records")
-
-        return {
-            "message": "Analiz başarılı",
-            "total": len(df_new),
-            "preview": preview,
-            "csv_string": csv_data
-        }
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"error": f"Analiz hatası: {str(e)}"})
 
 class PredictRequest(BaseModel):
     text: str
@@ -162,15 +125,16 @@ async def predict(req: PredictRequest):
     processed_input = stopword_remover.process_text(cleaned_input)
 
     input_vector = vectorizer.transform([processed_input])
-    prediction = int(model.predict(input_vector)[0])
     probability = model.predict_proba(input_vector)[0].tolist()
+    
+    # 1. sınıf (Pozitif) için olasılığı çek ve yüzdeye çevir
+    positivity_score = probability[1] * 100
 
     feature_names = vectorizer.get_feature_names_out()
     nonzero_indices = input_vector.nonzero()[1]
     words_found = [feature_names[i] for i in nonzero_indices]
 
     return {
-        "prediction": prediction,
-        "confidence": probability[prediction] * 100,
+        "positivity_score": positivity_score,
         "words_found": words_found
     }
