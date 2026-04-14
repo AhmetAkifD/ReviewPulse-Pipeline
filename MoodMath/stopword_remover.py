@@ -4,37 +4,34 @@ from nltk.corpus import stopwords
 from TurkishStemmer import TurkishStemmer  # YENİ: NLTK yerine saf Türkçe kök bulucu!
 
 
+# Global initialization so it can be used for single predictions
+nltk.download('stopwords', quiet=True)
+stop_words = set(stopwords.words('turkish'))
+custom_stopwords = {'bir', 'bu', 'şu', 'o', 'ürün', 'aldım', 'geldi', 'çok', 'için', 'diye', 've', 'ile', 'da',
+                    'de', 'daha', 'en', 'şey', 'ne', 'kadar', 'var', 'yok', 'ama', 'fakat', 'gibi'}
+stop_words.update(custom_stopwords)
+stemmer = TurkishStemmer()
+
+def process_text(text):
+    if type(text) != str: return ""
+
+    words = text.split()
+    processed_words = []
+
+    for word in words:
+        root_word = stemmer.stem(word)
+        # Önce kelime etkisiz mi (stop-word) diye bak, ayrıca kökü de kontrol et! (Örn: 'biri' -> 'bir')
+        if word not in stop_words and root_word not in stop_words:
+            processed_words.append(root_word)
+
+    return " ".join(processed_words)
+
 def run_nltk_cleaning():
     file_path = "CSV/cleaned_reviews.csv"
     try:
         df = pd.read_csv(file_path, encoding='utf-8')
     except FileNotFoundError:
         raise FileNotFoundError(f"Hata: '{file_path}' dosyası bulunamadı. Lütfen önce 1. aşamayı tamamlayın.")
-
-    # Kütüphaneleri ve kelimeleri hazırla
-    nltk.download('stopwords', quiet=True)
-    stop_words = set(stopwords.words('turkish'))
-    custom_stopwords = {'bir', 'bu', 'şu', 'o', 'ürün', 'aldım', 'geldi', 'çok', 'için', 'diye', 've', 'ile', 'da',
-                        'de', 'daha', 'en'}
-    stop_words.update(custom_stopwords)
-
-    # YENİ: Türkçe kök bulucuyu başlat
-    stemmer = TurkishStemmer()
-
-    def process_text(text):
-        if type(text) != str: return ""
-
-        words = text.split()
-        processed_words = []
-
-        for word in words:
-            # Önce kelime etkisiz mi (stop-word) diye bak
-            if word not in stop_words:
-                # Etkisiz değilse, kelimenin KÖKÜNÜ bul
-                root_word = stemmer.stem(word)
-                processed_words.append(root_word)
-
-        return " ".join(processed_words)
 
     # Fonksiyonu tüm yorumlara uygula
     df['NLP_Ready_Comment'] = df['Cleaned_Comment'].apply(process_text)

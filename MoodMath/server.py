@@ -46,10 +46,16 @@ async def upload_clean(file: UploadFile = File(...)):
         os.makedirs("CSV")
             
         # Parse file
-        if file.filename.endswith(".json"):
-            df = pd.read_json(file.file)
-        else:
-            df = pd.read_csv(file.file)
+        try:
+            contents = file.file.read()
+            if file.filename.endswith(".json"):
+                df = pd.read_json(io.BytesIO(contents))
+            else:
+                df = pd.read_csv(io.BytesIO(contents))
+        except ValueError as ve:
+            if "Expected object or value" in str(ve):
+                return JSONResponse(status_code=400, content={"error": "JSON formatı hatası (Expected object or value). Lütfen dosya uzantınız (.json veya .csv) ile içeriğinin eşleştiğinden emin olun. CSV kullanıyorsanız dosya adınızın sonuna .csv ekleyin."})
+            return JSONResponse(status_code=400, content={"error": f"Veri okuma hatası: {str(ve)}"})
 
         # 1. Cleaner
         data_cleaner.run_cleaner(df)
@@ -104,15 +110,23 @@ async def batch_analyze(file: UploadFile = File(...)):
     if not os.path.exists("Model/mood_model.pkl"):
         return JSONResponse(status_code=400, content={"error": "Önce model eğitmelisiniz!"})
     try:
-        if file.filename.endswith(".json"):
-            df_new = pd.read_json(file.file)
-        else:
-            df_new = pd.read_csv(file.file)
+        # Parse file
+        try:
+            contents = file.file.read()
+            if file.filename.endswith(".json"):
+                df_new = pd.read_json(io.BytesIO(contents))
+            else:
+                df_new = pd.read_csv(io.BytesIO(contents))
+        except ValueError as ve:
+            if "Expected object or value" in str(ve):
+                return JSONResponse(status_code=400, content={"error": "JSON formatı hatası (Expected object or value). Lütfen yüklediğiniz dosyanın geçerli bir formatta olduğuna veya uzantısının doğru olduğuna (.json / .csv) dikkat edin."})
+            return JSONResponse(status_code=400, content={"error": f"Veri okuma hatası: {str(ve)}"})
 
         model = joblib.load("Model/mood_model.pkl")
         vectorizer = joblib.load("Model/mood_vectorizer.pkl")
 
-        df_new['Cleaned'] = df_new['Comment'].apply(lambda x: str(x).lower())
+        # Yeni veriyi de aynı temizlik ve stopword (kök bulma vs) işlemlerinden geçir
+        df_new['Cleaned'] = df_new['Comment'].apply(data_cleaner.clean_text).apply(stopword_remover.process_text)
         X_new = vectorizer.transform(df_new['Cleaned'])
         df_new['Tahmin'] = model.predict(X_new)
         df_new['Duygu'] = df_new['Tahmin'].map({1: "Pozitif 😊", 0: "Negatif 😡"})
@@ -143,7 +157,11 @@ async def predict(req: PredictRequest):
     model = joblib.load("Model/mood_model.pkl")
     vectorizer = joblib.load("Model/mood_vectorizer.pkl")
 
-    input_vector = vectorizer.transform([req.text.lower()])
+    # Kullanıcının metnini aynen eğitirken yaptığımız gibi temizle ve köklerine ayır
+    cleaned_input = data_cleaner.clean_text(req.text)
+    processed_input = stopword_remover.process_text(cleaned_input)
+
+    input_vector = vectorizer.transform([processed_input])
     prediction = int(model.predict(input_vector)[0])
     probability = model.predict_proba(input_vector)[0].tolist()
 
