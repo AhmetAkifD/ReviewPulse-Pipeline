@@ -1,0 +1,3 @@
+Projeyi çalıştırmak için terminale şu komutu yazabilirsiniz:
+
+uvicorn server:app --reload
