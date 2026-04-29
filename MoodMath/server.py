@@ -13,6 +13,12 @@ from wordcloud import WordCloud
 import data_cleaner
 import stopword_remover
 import model_trainer
+import google.generativeai as genai
+
+# GEMINI API AYARLARI
+GEMINI_API_KEY = "AIzaSyCUGH_xDi02LJsHYztgcgFRNnJZI3jjK8Q" # Kendi anahtarını buraya yapıştır
+genai.configure(api_key=GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Ensure local directories exist
 for folder in ["static/css", "static/js", "templates", "CSV", "Model"]:
@@ -137,4 +143,55 @@ async def predict(req: PredictRequest):
     return {
         "positivity_score": positivity_score,
         "words_found": words_found
+    }
+class ArenaRequest(BaseModel):
+    text: str
+
+@app.post("/api/predict-arena")
+async def predict_arena(req: ArenaRequest):
+    if not os.path.exists("Model/mood_model.pkl") or not os.path.exists("Model/mood_vectorizer.pkl"):
+        return JSONResponse(status_code=400, content={"error": "Önce eğitim sayfasından model eğitmelisiniz!"})
+    if len(req.text.strip()) < 3:
+         return JSONResponse(status_code=400, content={"error": "Metin çok kısa!"})
+
+    # --- 1. KÖŞE: MOODMATH (Senin Modelin) ---
+    model = joblib.load("Model/mood_model.pkl")
+    vectorizer = joblib.load("Model/mood_vectorizer.pkl")
+
+    cleaned_input = data_cleaner.clean_text(req.text)
+    processed_input = stopword_remover.process_text(cleaned_input)
+
+    input_vector = vectorizer.transform([processed_input])
+    probability = model.predict_proba(input_vector)[0].tolist()
+    positivity_score = probability[1] * 100
+
+    feature_names = vectorizer.get_feature_names_out()
+    nonzero_indices = input_vector.nonzero()[1]
+    words_found = [feature_names[i] for i in nonzero_indices]
+
+    # --- 2. KÖŞE: GOOGLE GEMINI ---
+    gemini_result = ""
+    try:
+        prompt = f"""
+                Sen uzman bir e-ticaret duygu analizi botusun. Sana verilen müşteri yorumunu oku ve sadece şu formatta cevap ver:
+                KARAR: [Sadece POZİTİF veya NEGATİF yaz]
+                POZİTİFLİK: [%0 ile %100 arası bir sayı. Yorum tamamen negatifse 0'a yakın, tamamen pozitifse 100'e yakın bir oran yaz]
+                SEBEP: [Kararını açıklayan tek bir kısa cümle yaz]
+
+                Müşteri Yorumu: '{req.text}'
+                """
+        response = gemini_model.generate_content(prompt)
+        gemini_result = response.text.strip()
+    except Exception as e:
+        gemini_result = f"Gemini API Hatası: {str(e)}"
+
+    # İki sonucu da ön yüze (Frontend'e) gönder
+    return {
+        "moodmath": {
+            "positivity_score": positivity_score,
+            "words_found": words_found
+        },
+        "gemini": {
+            "result": gemini_result
+        }
     }

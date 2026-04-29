@@ -117,28 +117,35 @@
 
         <!-- Page 3: XAI -->
         <section id="page3" class="section">
-            <h1>Canlı Test ve Şeffaf Karar (XAI)</h1>
-            <p class="subtitle">Kendi cümlenizi yazın, yapay zeka analiz etsin ve kararının temel nedenini açıklasın.</p>
+            <h1>⚔️ Yapay Zeka Arenası: MoodMath vs Gemini</h1>
+            <p class="subtitle">Kendi cümlenizi yazın, hem sizin eğittiğiniz model hem de Google Gemini aynı anda analiz etsin!</p>
 
             <div class="card">
                 <textarea id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..."></textarea>
-                <button id="btnPredict"><span class="spinner"></span> Cümleyi Analiz Et</button>
+                <button id="btnPredict"><span class="spinner"></span> Meydan Okumayı Başlat</button>
                 <div class="alert" id="alertP3"></div>
             </div>
 
-            <div class="card" id="dashboard3" style="display: none;">
+            <div class="card" id="dashboard3" style="display: none; background: transparent; box-shadow: none; padding: 0;">
                 <div class="flex-row">
-                    <div class="col">
-                        <h3>Karar Sonucu</h3>
-                        <div class="metric-box" id="predBox" style="background: var(--card-bg); border-color: var(--primary);">
-                            <div class="metric-label" style="text-align: center; font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-muted);">Pozitiflik Skoru</div>
-                            <div class="metric-value" id="predScore" style="text-align: center; font-size: 3rem; margin-top: 0.5rem; text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);"></div>
+                    <div class="col card" style="border-top: 4px solid var(--primary);">
+                        <h3 style="text-align: center; color: var(--primary);">🤖 MoodMath (Yerel)</h3>
+                        <div class="metric-box" id="predBox" style="background: var(--card-bg); border-color: var(--primary); margin-top: 1rem;">
+                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu Yoğunluğu</div>
+                            <div class="metric-value" id="predScore" style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
                         </div>
+                        <h4 style="margin-top: 1.5rem; color: var(--text-muted);">🔍 Dikkat Edilen Kelimeler:</h4>
+                        <div id="predWords" style="margin-top: 0.5rem;"></div>
                     </div>
-                    <div class="col" style="flex: 2;">
-                        <h3>🔍 Şeffaf Analiz</h3>
-                        <p style="color: var(--text-muted); margin-bottom: 1rem;">Modelin bu kararı verirken dikkat ettiği (kendi hafızasında bildiği) kelimeler:</p>
-                        <div id="predWords"></div>
+
+                    <div class="col card" style="border-top: 4px solid #a855f7;">
+                        <h3 style="text-align: center; color: #a855f7;">🌌 Google Gemini (LLM)</h3>
+                        <div class="metric-box" id="geminiScoreBox" style="background: var(--card-bg); border-color: #a855f7; margin-top: 1rem; display: none;">
+                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu Yoğunluğu</div>
+                            <div class="metric-value" id="geminiScore" style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
+                        </div>
+                        <div id="geminiResult" style="margin-top: 1rem; line-height: 1.6; font-size: 1.1rem; padding: 1.5rem; background: rgba(168, 85, 247, 0.05); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                        </div>
                     </div>
                 </div>
             </div>
