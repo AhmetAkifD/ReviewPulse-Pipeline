@@ -1,34 +1,45 @@
 import pandas as pd
 import re
+import os
 
+# Emoji Sözlüğü
+emoji_dict = {
+    "😊": " mutlu ", "😀": " mutlu ", "😃": " mutlu ", "😁": " mutlu ", "😆": " komik ", "😂": " komik ",
+    "🤣": " komik ", "🥰": " sevgi ", "😍": " harika ", "🤩": " harika ", "😘": " öpücük ", "😗": " öpücük ",
+    "🤍": " kalp ", "❤️": " kalp ", "💕": " kalp ", "💖": " kalp ", "💗": " kalp ", "💙": " kalp ",
+    "👍": " onay ", "👌": " tamam ", "👏": " tebrik ", "🙌": " kutlama ", "🤝": " anlaşma ",
+    "🔥": " harika ", "✨": " parıltı ", "🌟": " yıldız ", "💯": " mükemmel ", 
+    "😔": " üzgün ", "😞": " üzgün ", "😟": " endişeli ", "😠": " kızgın ", "😡": " kızgın ", "🤬": " küfür ",
+    "😭": " ağlama ", "😢": " ağlama ", "💔": " kırık_kalp ", "👎": " ret ", "🤦": " hayal_kırıklığı ",
+    "🗑️": " çöp ", "💩": " kötü ", "🤮": " iğrenç ", "🤢": " iğrenç "
+}
 
-def run_cleaner():
-    print("\n--- 1. AŞAMA: Ham Veri Temizliği Başlıyor ---")
-    file_path = "CSV/master_reviews_dataset.csv"
+def clean_text(text):
+    if type(text) != str: return ""
+    # Emojileri metne çevir
+    for emoji_char, word_meaning in emoji_dict.items():
+        text = text.replace(emoji_char, word_meaning)
+        
+    text = text.replace('İ', 'i').replace('I', 'ı')
+    text = text.lower()
+    text = re.sub(r'[^a-zçğıöşü\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
-    try:
-        df = pd.read_csv(file_path, encoding='utf-8')
-    except FileNotFoundError:
-        print(f"Hata: {file_path} bulunamadı.")
-        return
+def map_sentiment(rating):
+    return 0 if rating <= 3 else 1
 
-    def clean_text(text):
-        if type(text) != str: return ""
-        text = text.replace('İ', 'i').replace('I', 'ı')
-        text = text.lower()
-        text = re.sub(r'[^a-zçğıöşü\s]', ' ', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
-
+# Artık fonksiyonumuz dışarıdan bir 'df' (Dataframe) kabul ediyor!
+def run_cleaner(df):
     df['Cleaned_Comment'] = df['Comment'].apply(clean_text)
     df = df[df['Cleaned_Comment'] != ""]
     df = df.dropna(subset=['Cleaned_Comment'])
 
-    def map_sentiment(rating):
-        return 0 if rating <= 3 else 1
-
     df['Sentiment'] = df['Rating'].apply(map_sentiment)
+
+    # Eğer CSV klasörü yanlışlıkla silindiyse kod çökmesin diye güvenlik önlemi
+    if not os.path.exists("CSV"):
+        os.makedirs("CSV")
 
     cleaned_file_path = "CSV/cleaned_reviews.csv"
     df.to_csv(cleaned_file_path, index=False, encoding='utf-8')
-    print(f"1. Aşama Tamamlandı! Veri '{cleaned_file_path}' olarak kaydedildi.\n")
