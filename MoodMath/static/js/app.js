@@ -66,15 +66,6 @@ document.getElementById('btnClean').addEventListener('click', async () => {
         document.getElementById('valPos').innerText = data.pos;
         document.getElementById('valNeg').innerText = data.neg;
 
-        if (data.pos_wc) {
-            document.getElementById('imgPosWc').src = "data:image/png;base64," + data.pos_wc;
-            document.getElementById('imgPosWc').style.display = 'block';
-        }
-        if (data.neg_wc) {
-            document.getElementById('imgNegWc').src = "data:image/png;base64," + data.neg_wc;
-            document.getElementById('imgNegWc').style.display = 'block';
-        }
-
         // Render Chart.js
         if(currentChart) currentChart.destroy();
         const ctx = document.getElementById('chartSentiment').getContext('2d');
@@ -105,10 +96,6 @@ document.getElementById('btnClean').addEventListener('click', async () => {
 });
 
 // Page 2: Train
-const sliderF = document.getElementById('sliderFeat');
-const featV = document.getElementById('featVal');
-sliderF.addEventListener('input', () => featV.innerText = sliderF.value);
-
 const sliderT = document.getElementById('sliderTest');
 const testV = document.getElementById('testVal');
 sliderT.addEventListener('input', () => testV.innerText = sliderT.value);
@@ -118,7 +105,6 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
     hideAlert('alertP2');
     try {
         const payload = {
-            max_features: parseInt(sliderF.value),
             test_size: parseFloat(sliderT.value)
         };
         const r = await fetch('/api/train', {
@@ -127,9 +113,9 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
             body: JSON.stringify(payload)
         });
         const data = await r.json();
-        
+
         if(!r.ok) throw new Error(data.error);
-        
+
         showAlert('alertP2', 'success', data.message);
         document.getElementById('dashboard2').style.display = 'block';
 
@@ -193,7 +179,7 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
         const wordsDiv = document.getElementById('predWords');
         wordsDiv.innerHTML = "";
         if(data.moodmath.words_found.length === 0) {
-            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">🤔 Model eşleşen bir kelime bulamadı.</div>`;
+            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">Model eşleşen bir kelime bulamadı.</div>`;
         } else {
             data.moodmath.words_found.forEach(w => {
                 const sp = document.createElement('span');
@@ -229,8 +215,8 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
         }
 
         let geminiHtml = rawGeminiText;
-        geminiHtml = geminiHtml.replace(/KARAR:\s*POZİTİF/gi, '<strong style="color: var(--success); font-size: 1.2rem;">KARAR: POZİTİF 😊</strong><br>');
-        geminiHtml = geminiHtml.replace(/KARAR:\s*NEGATİF/gi, '<strong style="color: var(--error); font-size: 1.2rem;">KARAR: NEGATİF 😡</strong><br>');
+        geminiHtml = geminiHtml.replace(/KARAR:\s*POZİTİF/gi, '<strong style="color: var(--success); font-size: 1.2rem;">KARAR: POZİTİF</strong><br>');
+        geminiHtml = geminiHtml.replace(/KARAR:\s*NEGATİF/gi, '<strong style="color: var(--error); font-size: 1.2rem;">KARAR: NEGATİF</strong><br>');
         geminiHtml = geminiHtml.replace(/SEBEP:/gi, '<br><strong style="color: var(--primary);">SEBEP:</strong>');
 
         document.getElementById('geminiResult').innerHTML = geminiHtml;
