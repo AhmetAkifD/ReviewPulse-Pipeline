@@ -66,15 +66,6 @@ document.getElementById('btnClean').addEventListener('click', async () => {
         document.getElementById('valPos').innerText = data.pos;
         document.getElementById('valNeg').innerText = data.neg;
 
-        if (data.pos_wc) {
-            document.getElementById('imgPosWc').src = "data:image/png;base64," + data.pos_wc;
-            document.getElementById('imgPosWc').style.display = 'block';
-        }
-        if (data.neg_wc) {
-            document.getElementById('imgNegWc').src = "data:image/png;base64," + data.neg_wc;
-            document.getElementById('imgNegWc').style.display = 'block';
-        }
-
         // Render Chart.js
         if(currentChart) currentChart.destroy();
         const ctx = document.getElementById('chartSentiment').getContext('2d');
@@ -105,10 +96,6 @@ document.getElementById('btnClean').addEventListener('click', async () => {
 });
 
 // Page 2: Train
-const sliderF = document.getElementById('sliderFeat');
-const featV = document.getElementById('featVal');
-sliderF.addEventListener('input', () => featV.innerText = sliderF.value);
-
 const sliderT = document.getElementById('sliderTest');
 const testV = document.getElementById('testVal');
 sliderT.addEventListener('input', () => testV.innerText = sliderT.value);
@@ -118,7 +105,6 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
     hideAlert('alertP2');
     try {
         const payload = {
-            max_features: parseInt(sliderF.value),
             test_size: parseFloat(sliderT.value)
         };
         const r = await fetch('/api/train', {
@@ -127,9 +113,9 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
             body: JSON.stringify(payload)
         });
         const data = await r.json();
-        
+
         if(!r.ok) throw new Error(data.error);
-        
+
         showAlert('alertP2', 'success', data.message);
         document.getElementById('dashboard2').style.display = 'block';
 
@@ -155,15 +141,15 @@ document.getElementById('btnTrain').addEventListener('click', async () => {
     }
 });
 
-// Page 3: Predict
+// Page 3: Predict Arena
 document.getElementById('btnPredict').addEventListener('click', async () => {
     const text = document.getElementById('txtPredict').value;
     if(text.length < 3) return showAlert('alertP3', 'error', 'Çok kısa metin!');
-    
+
     setLoading('btnPredict', true);
     hideAlert('alertP3');
     try {
-        const r = await fetch('/api/predict', {
+        const r = await fetch('/api/predict-arena', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ text })
@@ -172,28 +158,30 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
         if(!r.ok) throw new Error(data.error);
 
         document.getElementById('dashboard3').style.display = 'block';
-        
+
+        // --- MOODMATH UI GÜNCELLEMESİ ---
         const predBox = document.getElementById('predBox');
-        const score = data.positivity_score;
-        
-        if (score >= 50) {
+        const moodPositivity = data.moodmath.positivity_score;
+
+        if (moodPositivity >= 50) {
             predBox.style.borderColor = 'var(--success)';
             predBox.style.background = 'rgba(16, 185, 129, 0.05)';
             document.getElementById('predScore').style.color = 'var(--success)';
+            document.getElementById('predScore').innerText = `%${moodPositivity.toFixed(1)} Pozitif`;
         } else {
             predBox.style.borderColor = 'var(--error)';
             predBox.style.background = 'rgba(239, 68, 68, 0.05)';
             document.getElementById('predScore').style.color = 'var(--error)';
+            const moodNegativity = 100 - moodPositivity;
+            document.getElementById('predScore').innerText = `%${moodNegativity.toFixed(1)} Negatif`;
         }
-        
-        document.getElementById('predScore').innerText = `%${score.toFixed(1)}`;
 
         const wordsDiv = document.getElementById('predWords');
         wordsDiv.innerHTML = "";
-        if(data.words_found.length === 0) {
-            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">🤔 Model eşleşen bir kelime bulamadı, genel ağırlık bazlı tahmin yapıldı.</div>`;
+        if(data.moodmath.words_found.length === 0) {
+            wordsDiv.innerHTML = `<div class="alert visible" style="background: rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1)">Model eşleşen bir kelime bulamadı.</div>`;
         } else {
-            data.words_found.forEach(w => {
+            data.moodmath.words_found.forEach(w => {
                 const sp = document.createElement('span');
                 sp.className = 'badge pos';
                 sp.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.4))';
@@ -203,6 +191,36 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
                 wordsDiv.appendChild(sp);
             });
         }
+
+        // --- GEMINI UI GÜNCELLEMESİ ---
+        let rawGeminiText = data.gemini.result;
+
+        // Düzenli ifade ile POZİTİFLİK oranını bul
+        const scoreMatch = rawGeminiText.match(/POZİTİFLİK:\s*%?(\d+)/i);
+        if(scoreMatch) {
+            document.getElementById('geminiScoreBox').style.display = 'block';
+            let geminiPositivity = parseFloat(scoreMatch[1]);
+            const gemScoreEl = document.getElementById('geminiScore');
+
+            if (geminiPositivity >= 50) {
+                gemScoreEl.style.color = 'var(--success)';
+                gemScoreEl.innerText = `%${geminiPositivity.toFixed(0)} Pozitif`;
+            } else {
+                gemScoreEl.style.color = 'var(--error)';
+                let geminiNegativity = 100 - geminiPositivity;
+                gemScoreEl.innerText = `%${geminiNegativity.toFixed(0)} Negatif`;
+            }
+            // Arayüze basarken ham metinden bu satırı silelim
+            rawGeminiText = rawGeminiText.replace(/POZİTİFLİK:.*?\n?/i, "");
+        }
+
+        let geminiHtml = rawGeminiText;
+        geminiHtml = geminiHtml.replace(/KARAR:\s*POZİTİF/gi, '<strong style="color: var(--success); font-size: 1.2rem;">KARAR: POZİTİF</strong><br>');
+        geminiHtml = geminiHtml.replace(/KARAR:\s*NEGATİF/gi, '<strong style="color: var(--error); font-size: 1.2rem;">KARAR: NEGATİF</strong><br>');
+        geminiHtml = geminiHtml.replace(/SEBEP:/gi, '<br><strong style="color: var(--primary);">SEBEP:</strong>');
+
+        document.getElementById('geminiResult').innerHTML = geminiHtml;
+
     } catch(err) {
         showAlert('alertP3', 'error', err.message);
     } finally {
