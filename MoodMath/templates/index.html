@@ -21,6 +21,8 @@
         <div class="menu-item" data-target="page2">Model Eğitimi</div>
         <div class="menu-item" data-target="page3">Canlı Test (XAI)</div>
         <div class="menu-item" data-target="page4">Sistemle Sohbet</div>
+        <div class="menu-item" data-target="page5">Ayarlar</div>
+
     </nav>
 
     <!-- Main Content -->
@@ -161,6 +163,35 @@
                 <div id="bottomSpacer"></div>
             </div>
         </section>
+
+        <!-- Page 5: Settings -->
+        <section id="page5" class="section">
+
+            <h1>Sistem Ayarları</h1>
+            <p class="subtitle">API anahtarlarını ve çalışma parametrelerini yapılandırın.</p>
+
+            <div class="card">
+                <h3>Genel Ayarlar</h3>
+                
+                <div class="col" style="margin-bottom: 1.5rem;">
+                    <label for="inputApiKey" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Gemini API Key</label>
+                    <input type="text" id="inputApiKey" placeholder="AIzaSy..." style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;">
+                </div>
+
+                <div class="col" style="margin-bottom: 2rem;">
+                    <label for="inputWaitTime" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Scraper Bekleme Süresi (Saniye)</label>
+                    <input type="number" id="inputWaitTime" step="0.5" placeholder="10.5" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Hepsiburada üzerinde her bir yıldız filtresine tıklandıktan sonra yorumların yüklenmesi için beklenecek süre.</p>
+                </div>
+
+                <div class="flex-row" style="justify-content: flex-start;">
+                    <button id="btnSaveSettings" style="width: auto; padding: 12px 30px; margin: 0;"><span class="spinner"></span> Ayarları Kaydet</button>
+                </div>
+                
+                <div class="alert" id="alertP5"></div>
+            </div>
+        </section>
+
 
     </main>
 

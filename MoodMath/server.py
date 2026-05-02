@@ -3,11 +3,15 @@ import joblib
 import os
 import shutil
 from fastapi import FastAPI, File, UploadFile, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import io
 import base64
+import re
+import json
+import asyncio
+import threading
 
 import data_cleaner
 import stopword_remover
@@ -15,14 +19,32 @@ import model_trainer
 import google.generativeai as genai
 import scraper
 
+# CONFIG YÜKLEME
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {
+        "gemini_api_key": "AIzaSyB6GEPrxo9cFhU94IC5FLpH4bNsmFh9J-Y",
+        "scraper_wait_time": 10.5
+    }
+
+def save_config(config):
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4)
+
+config = load_config()
+
 # GEMINI API AYARLARI
-GEMINI_API_KEY = "AIzaSyCUGH_xDi02LJsHYztgcgFRNnJZI3jjK8Q"
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=config["gemini_api_key"])
 gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Ensure local directories exist
 for folder in ["static/css", "static/js", "templates", "CSV", "Model"]:
     os.makedirs(folder, exist_ok=True)
+
 
 app = FastAPI(title="MoodMath API")
 
@@ -191,12 +213,116 @@ class ChatRequest(BaseModel):
 async def chat_endpoint(req: ChatRequest):
     message = req.message.strip()
     
-    # Şu anlık sadece linki kontrol ediyoruz
-    if message.startswith("http"):
-        try:
-            product_name = scraper.get_product_name(message)
-            return {"reply": f"Linkteki ürün başarıyla bulundu:\n{product_name}"}
-        except Exception as e:
-            return {"reply": f"Sistemsel Hata: {str(e)}"}
-    else:
-        return {"reply": "Sistem şu anda sadece Hepsiburada linklerini analiz edebilir. Lütfen bir ürün linki gönderin."}
+    # 1. URL'yi bul (Regex ile)
+    url_match = re.search(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", message)
+    if not url_match:
+        async def err_gen():
+            yield json.dumps({"status": "error", "message": "Gönderdiğiniz mesajda geçerli bir Hepsiburada linki bulunamadı. Lütfen bir ürün linki ekleyin."}) + "\n"
+        return StreamingResponse(err_gen(), media_type="application/x-ndjson")
+        
+    url = url_match.group(0)
+    user_instruction = message.replace(url, "").strip()
+    if not user_instruction:
+        user_instruction = "Bu ürünü yorumlara dayanarak analiz et."
+        
+    async def event_generator():
+        queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+        
+        def progress_callback(msg):
+            asyncio.run_coroutine_threadsafe(queue.put({"status": "progress", "message": msg}), loop)
+            
+        def worker():
+            try:
+                # Web Scraping
+                current_config = load_config()
+                scrape_result = scraper.scrape_reviews(url, progress_callback, wait_time=current_config["scraper_wait_time"])
+                product_name = scrape_result["product_name"]
+
+                reviews = scrape_result["reviews"]
+                
+                if not reviews:
+                    progress_callback("Ürüne ait yorum bulunamadı veya çekilemedi.")
+                    asyncio.run_coroutine_threadsafe(queue.put({
+                        "status": "done", 
+                        "reply": f"Maalesef <b>{product_name}</b> için yorum bulamadım."
+                    }), loop)
+                    return
+                
+                # Yerel Modeli Çalıştır (Temizlemesiz)
+                progress_callback("Yorumlar yerel MoodMath modelinde analiz ediliyor...")
+                model = joblib.load("Model/mood_model.pkl")
+                vectorizer = joblib.load("Model/mood_vectorizer.pkl")
+                
+                input_vector = vectorizer.transform(reviews)
+                probability = model.predict_proba(input_vector)
+                
+                avg_positivity = float(probability[:, 1].mean() * 100)
+                
+                feature_names = vectorizer.get_feature_names_out()
+                nonzero_indices = input_vector.nonzero()[1]
+                unique_indices = set(nonzero_indices)
+                words_found = [feature_names[i] for i in unique_indices]
+                words_str = ", ".join(list(words_found)[:50]) if words_found else "Belirgin kelime bulunamadı"
+                
+                # Gemini İstediği
+                progress_callback("Analiz sonuçları uzman Gemini'ye gönderiliyor...")
+                
+                prompt = f"""Sen ürün yorumlarını inceleyen ve ürün hakkındaki düşüncüleri analiz eden bir uzmansın. Vereceğim verileri inceleyip birkaç cümlelik, profesyonel bir geri dönüş yap.
+
+Kullanıcı senden şunu istiyor: {message}
+
+İhtiyacın olan veriler:
+Duygu Yoğunluğu: %{avg_positivity:.1f} Pozitif
+Dikkat Edilen Kelimeler: {words_str}"""
+
+                response = gemini_model.generate_content(prompt)
+                gemini_result = response.text.strip()
+                
+                gemini_html = gemini_result.replace('\n', '<br>')
+                
+                final_reply = f"""
+                <strong style="color: var(--primary);">{product_name}</strong><br>
+                <strong style="color: {'var(--success)' if avg_positivity >= 50 else 'var(--error)'};">MoodMath Duygu Skoru: %{avg_positivity:.1f} Pozitif</strong><br><br>
+                {gemini_html}
+                """
+                
+                asyncio.run_coroutine_threadsafe(queue.put({"status": "done", "reply": final_reply}), loop)
+                
+            except Exception as e:
+                asyncio.run_coroutine_threadsafe(queue.put({"status": "error", "message": str(e)}), loop)
+
+        # Arka plan iş parçacığını başlat
+        thread = threading.Thread(target=worker)
+        thread.start()
+        
+        while True:
+            msg = await queue.get()
+            yield json.dumps(msg) + "\n"
+            if msg["status"] in ["done", "error"]:
+                break
+                
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+
+class SettingsRequest(BaseModel):
+    gemini_api_key: str
+    scraper_wait_time: float
+
+@app.get("/api/settings")
+async def get_settings():
+    return load_config()
+
+@app.post("/api/settings")
+async def update_settings(req: SettingsRequest):
+    new_config = {
+        "gemini_api_key": req.gemini_api_key,
+        "scraper_wait_time": req.scraper_wait_time
+    }
+    save_config(new_config)
+    
+    # Gemini'yi yeniden yapılandır
+    genai.configure(api_key=new_config["gemini_api_key"])
+    
+    return {"message": "Ayarlar başarıyla kaydedildi!"}
+

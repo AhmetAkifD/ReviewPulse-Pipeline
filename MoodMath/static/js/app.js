@@ -22,7 +22,17 @@ function hideAlert(parent) {
     el.className = 'alert';
 }
 
+const alertP2 = document.getElementById('alertP2');
+const alertP3 = document.getElementById('alertP3');
+const alertP5 = document.getElementById('alertP5');
+
+// Settings Elements
+const inputApiKey = document.getElementById('inputApiKey');
+const inputWaitTime = document.getElementById('inputWaitTime');
+const btnSaveSettings = document.getElementById('btnSaveSettings');
+
 function setLoading(btnId, isLoading) {
+
     const btn = document.getElementById(btnId);
     if(isLoading) {
         btn.classList.add('loading');
@@ -228,6 +238,57 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
     }
 });
 
+// --- Page 5: Settings ---
+async function fetchSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (inputApiKey) inputApiKey.value = data.gemini_api_key;
+        if (inputWaitTime) inputWaitTime.value = data.scraper_wait_time;
+    } catch (err) {
+        console.error("Ayarlar yüklenemedi:", err);
+    }
+}
+
+if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', async () => {
+        const apiKey = inputApiKey.value.trim();
+        const waitTime = parseFloat(inputWaitTime.value);
+
+        if (!apiKey) {
+            showAlert('alertP5', 'error', 'API Key boş olamaz!');
+            return;
+        }
+
+        setLoading('btnSaveSettings', true);
+        hideAlert('alertP5');
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gemini_api_key: apiKey,
+                    scraper_wait_time: waitTime
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showAlert('alertP5', 'success', data.message);
+            } else {
+                throw new Error(data.error || "Bilinmeyen hata");
+            }
+        } catch (err) {
+            showAlert('alertP5', 'error', "Hata: " + err.message);
+        } finally {
+            setLoading('btnSaveSettings', false);
+        }
+    });
+}
+
+// Uygulama yüklenince ayarları çek
+fetchSettings();
+
+
 // --- Page 4: Chat Interface ---
 const chatContainer = document.getElementById('chatContainer');
 const messagesArea = document.getElementById('messagesArea');
@@ -267,7 +328,14 @@ async function handleSend() {
     // Kullanıcı mesajını ekle
     addMessage(text, 'user');
 
-    // API çağrısı yap
+    // Bot için bir mesaj balonu oluştur ve referansını al
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', 'bot');
+    msgDiv.innerHTML = '<span class="spinner" style="display:inline-block; border-color:var(--primary); border-top-color:transparent; width:15px; height:15px; margin-right:8px; vertical-align:middle;"></span> Sistem başlatılıyor...';
+    messagesArea.appendChild(msgDiv);
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+
+    // API çağrısı yap (Streaming)
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -277,15 +345,39 @@ async function handleSend() {
             body: JSON.stringify({ message: text })
         });
         
-        const data = await response.json();
+        if (!response.body) throw new Error("Tarayıcı streaming desteklemiyor.");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
         
-        if (!response.ok) {
-            throw new Error(data.error || "Sunucu hatası");
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n').filter(line => line.trim() !== '');
+            
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line);
+                    
+                    if (data.status === "progress") {
+                        msgDiv.innerHTML = `<span class="spinner" style="display:inline-block; border-color:var(--primary); border-top-color:transparent; width:15px; height:15px; margin-right:8px; vertical-align:middle;"></span> ${data.message}`;
+                    } 
+                    else if (data.status === "done") {
+                        msgDiv.innerHTML = data.reply;
+                    }
+                    else if (data.status === "error") {
+                        msgDiv.innerHTML = `<span style="color:var(--error);">Hata: ${data.message}</span>`;
+                    }
+                    messagesArea.scrollTop = messagesArea.scrollHeight;
+                } catch (e) {
+                    console.error("JSON parse hatası:", e, "Gelen parça:", line);
+                }
+            }
         }
-        
-        addMessage(data.reply, 'bot');
     } catch (err) {
-        addMessage("Sistemsel Hata: " + err.message, 'bot');
+        msgDiv.innerHTML = `<span style="color:var(--error);">Sistemsel Hata: ${err.message}</span>`;
     }
 }
 
