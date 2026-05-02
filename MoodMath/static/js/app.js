@@ -250,7 +250,7 @@ function addMessage(text, sender) {
 }
 
 // Gönder eylemi
-function handleSend() {
+async function handleSend() {
     if (!chatInput) return;
     const text = chatInput.value.trim();
     if (!text) return;
@@ -267,10 +267,26 @@ function handleSend() {
     // Kullanıcı mesajını ekle
     addMessage(text, 'user');
 
-    // Karşı taraftan (bot) cevap gelmesi için kısa bir gecikme simülasyonu
-    setTimeout(() => {
-        addMessage('mesaj sistemi çalışıyor', 'bot');
-    }, 800);
+    // API çağrısı yap
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || "Sunucu hatası");
+        }
+        
+        addMessage(data.reply, 'bot');
+    } catch (err) {
+        addMessage("Sistemsel Hata: " + err.message, 'bot');
+    }
 }
 
 // Butona tıklandığında gönder

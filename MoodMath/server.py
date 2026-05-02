@@ -13,6 +13,7 @@ import data_cleaner
 import stopword_remover
 import model_trainer
 import google.generativeai as genai
+import scraper
 
 # GEMINI API AYARLARI
 GEMINI_API_KEY = "AIzaSyCUGH_xDi02LJsHYztgcgFRNnJZI3jjK8Q"
@@ -181,3 +182,21 @@ async def predict_arena(req: ArenaRequest):
             "result": gemini_result
         }
     }
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest):
+    message = req.message.strip()
+    
+    # Şu anlık sadece linki kontrol ediyoruz
+    if message.startswith("http"):
+        try:
+            product_name = scraper.get_product_name(message)
+            return {"reply": f"Linkteki ürün başarıyla bulundu:\n{product_name}"}
+        except Exception as e:
+            return {"reply": f"Sistemsel Hata: {str(e)}"}
+    else:
+        return {"reply": "Sistem şu anda sadece Hepsiburada linklerini analiz edebilir. Lütfen bir ürün linki gönderin."}
