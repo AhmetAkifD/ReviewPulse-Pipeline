@@ -227,3 +227,62 @@ document.getElementById('btnPredict').addEventListener('click', async () => {
         setLoading('btnPredict', false);
     }
 });
+
+// --- Page 4: Chat Interface ---
+const chatContainer = document.getElementById('chatContainer');
+const messagesArea = document.getElementById('messagesArea');
+const chatInput = document.getElementById('chatInput');
+const btnSend = document.getElementById('btnSend');
+let isFirstMessage = true;
+
+// Mesaj ekleme fonksiyonu
+function addMessage(text, sender) {
+    if (!messagesArea) return;
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', sender);
+    msgDiv.textContent = text;
+    messagesArea.appendChild(msgDiv);
+    
+    // Yeni mesaj eklendiğinde en alta kaydır
+    setTimeout(() => {
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }, 50);
+}
+
+// Gönder eylemi
+function handleSend() {
+    if (!chatInput) return;
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    // Input'u temizle
+    chatInput.value = '';
+
+    // İlk mesaj gönderildiğinde ortadaki input alanını alta kaydır (animasyon)
+    if (isFirstMessage) {
+        chatContainer.classList.add('active');
+        isFirstMessage = false;
+    }
+
+    // Kullanıcı mesajını ekle
+    addMessage(text, 'user');
+
+    // Karşı taraftan (bot) cevap gelmesi için kısa bir gecikme simülasyonu
+    setTimeout(() => {
+        addMessage('mesaj sistemi çalışıyor', 'bot');
+    }, 800);
+}
+
+// Butona tıklandığında gönder
+if (btnSend) {
+    btnSend.addEventListener('click', handleSend);
+}
+
+// Enter tuşuna basıldığında gönder
+if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSend();
+        }
+    });
+}

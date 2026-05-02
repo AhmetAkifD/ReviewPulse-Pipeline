@@ -20,6 +20,7 @@
         <div class="menu-item active" data-target="page1">Veri Boru Hattı</div>
         <div class="menu-item" data-target="page2">Model Eğitimi</div>
         <div class="menu-item" data-target="page3">Canlı Test (XAI)</div>
+        <div class="menu-item" data-target="page4">Sistemle Sohbet</div>
     </nav>
 
     <!-- Main Content -->
@@ -131,6 +132,33 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Page 4: Chat Interface -->
+        <section id="page4" class="section">
+            <h1 style="text-align: center; margin-bottom: 0;">Sistemle Sohbet</h1>
+            <p class="subtitle" style="text-align: center; margin-bottom: 1rem;">Yapay zeka asistanı ile etkileşime geçin.</p>
+
+            <div id="chatContainer">
+                <!-- Input'u ortalamak için üst boşluk -->
+                <div id="topSpacer"></div>
+                
+                <div id="messagesArea">
+                    <!-- Mesajlar buraya eklenecek -->
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="chatInput" placeholder="Sistemle konuşmak için bir şeyler yazın..." autocomplete="off">
+                    <button id="btnSend" aria-label="Gönder">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Input'u ortalamak için alt boşluk -->
+                <div id="bottomSpacer"></div>
             </div>
         </section>
 
