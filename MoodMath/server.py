@@ -265,16 +265,28 @@ async def chat_endpoint(req: ChatRequest):
                 words_found = [feature_names[i] for i in unique_indices]
                 words_str = ", ".join(list(words_found)[:50]) if words_found else "Belirgin kelime bulunamadı"
                 
+                # Yerel model metriklerini oku (varsa)
+                model_accuracy = "Bilinmiyor"
+                if os.path.exists("Model/metrics.json"):
+                    try:
+                        with open("Model/metrics.json", "r", encoding="utf-8") as f:
+                            m_data = json.load(f)
+                            model_accuracy = f"%{m_data['accuracy']*100:.1f}"
+                    except:
+                        pass
+
                 # Gemini İstediği
                 progress_callback("Analiz sonuçları uzman Gemini'ye gönderiliyor...")
                 
                 prompt = f"""Sen ürün yorumlarını inceleyen ve ürün hakkındaki düşüncüleri analiz eden bir uzmansın. Vereceğim verileri inceleyip birkaç cümlelik, profesyonel bir geri dönüş yap.
+Analizi yaparken MoodMath yerel modelinin sonuçlarını baz al. Bu modelin genel başarı oranı (Accuracy): {model_accuracy}.
 
 Kullanıcı senden şunu istiyor: {message}
 
 İhtiyacın olan veriler:
 Duygu Yoğunluğu: %{avg_positivity:.1f} Pozitif
 Dikkat Edilen Kelimeler: {words_str}"""
+
 
                 response = gemini_model.generate_content(prompt)
                 gemini_result = response.text.strip()
@@ -283,9 +295,11 @@ Dikkat Edilen Kelimeler: {words_str}"""
                 
                 final_reply = f"""
                 <strong style="color: var(--primary);">{product_name}</strong><br>
-                <strong style="color: {'var(--success)' if avg_positivity >= 50 else 'var(--error)'};">MoodMath Duygu Skoru: %{avg_positivity:.1f} Pozitif</strong><br><br>
+                <strong style="color: {'var(--success)' if avg_positivity >= 50 else 'var(--error)'};">MoodMath Duygu Skoru: %{avg_positivity:.1f} Pozitif</strong> 
+                <span style="font-size: 0.8rem; color: var(--text-muted);">(Model Başarımı: {model_accuracy})</span><br><br>
                 {gemini_html}
                 """
+
                 
                 asyncio.run_coroutine_threadsafe(queue.put({"status": "done", "reply": final_reply}), loop)
                 
@@ -325,4 +339,12 @@ async def update_settings(req: SettingsRequest):
     genai.configure(api_key=new_config["gemini_api_key"])
     
     return {"message": "Ayarlar başarıyla kaydedildi!"}
+
+@app.get("/api/model-metrics")
+async def get_model_metrics():
+    if os.path.exists("Model/metrics.json"):
+        with open("Model/metrics.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    return JSONResponse(status_code=404, content={"error": "Metrik dosyası bulunamadı. Lütfen önce modeli eğitin."})
+
 

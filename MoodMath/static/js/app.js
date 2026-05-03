@@ -1,6 +1,24 @@
-// Nav handles
 const menuItems = document.querySelectorAll('.menu-item');
 const sections = document.querySelectorAll('.section');
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const btnGoToSettings = document.getElementById('btnGoToSettings');
+
+// Sidebar Toggle
+if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+}
+
+// Settings Button (Top Right)
+if (btnGoToSettings) {
+    btnGoToSettings.addEventListener('click', () => {
+        menuItems.forEach(i => i.classList.remove('active'));
+        sections.forEach(s => s.classList.remove('active'));
+        document.getElementById('page5').classList.add('active');
+    });
+}
 
 menuItems.forEach(item => {
     item.addEventListener('click', () => {
@@ -11,6 +29,7 @@ menuItems.forEach(item => {
         document.getElementById(item.dataset.target).classList.add('active');
     });
 });
+
 
 function showAlert(parent, type, message) {
     const el = document.getElementById(parent);
@@ -31,7 +50,15 @@ const inputApiKey = document.getElementById('inputApiKey');
 const inputWaitTime = document.getElementById('inputWaitTime');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 
+// Model Selection & Balloon Elements
+const btnToggleModelList = document.getElementById('btnToggleModelList');
+const modelDropdown = document.getElementById('modelDropdown');
+const metricsBalloon = document.getElementById('metricsBalloon');
+const btnCloseBalloon = document.getElementById('btnCloseBalloon');
+const modelOptions = document.querySelectorAll('.model-option');
+
 function setLoading(btnId, isLoading) {
+
 
     const btn = document.getElementById(btnId);
     if(isLoading) {
@@ -289,7 +316,67 @@ if (btnSaveSettings) {
 fetchSettings();
 
 
+// --- MODEL SELECTION & BALLOON LOGIC ---
+
+// Dropdown aç/kapat
+if (btnToggleModelList) {
+    btnToggleModelList.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modelDropdown.classList.toggle('active');
+    });
+}
+
+// Balonu kapat
+if (btnCloseBalloon) {
+    btnCloseBalloon.addEventListener('click', () => {
+        metricsBalloon.classList.remove('visible');
+    });
+}
+
+// Model seçimi ve metrikleri göster
+modelOptions.forEach(opt => {
+    opt.addEventListener('click', async () => {
+        const modelName = opt.dataset.model;
+        
+        // UI güncelle
+        modelOptions.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        modelDropdown.classList.remove('active');
+
+        // Metrikleri çek ve balonu göster
+        try {
+            const r = await fetch('/api/model-metrics');
+            if (!r.ok) throw new Error("Metrikler alınamadı");
+            const data = await r.json();
+
+            document.getElementById('balloonAcc').innerText = `%${(data.accuracy * 100).toFixed(1)}`;
+            
+            // Ortalama değerleri 'macro avg' kısmından alıyoruz
+            const macro = data.report['macro avg'];
+            document.getElementById('balloonPrec').innerText = `%${(macro.precision * 100).toFixed(1)}`;
+            document.getElementById('balloonRec').innerText = `%${(macro.recall * 100).toFixed(1)}`;
+            document.getElementById('balloonF1').innerText = `%${(macro['f1-score'] * 100).toFixed(1)}`;
+
+            metricsBalloon.classList.add('visible');
+        } catch (err) {
+            console.error(err);
+            // Hata durumunda sadece balonu göster ama değerleri '-' bırak (veya alert ver)
+        }
+    });
+});
+
+// Dışarı tıklayınca kapatma
+document.addEventListener('click', (e) => {
+    if (modelDropdown && !modelDropdown.contains(e.target) && e.target !== btnToggleModelList) {
+        modelDropdown.classList.remove('active');
+    }
+    if (metricsBalloon && !metricsBalloon.contains(e.target)) {
+        metricsBalloon.classList.remove('visible');
+    }
+});
+
 // --- Page 4: Chat Interface ---
+
 const chatContainer = document.getElementById('chatContainer');
 const messagesArea = document.getElementById('messagesArea');
 const chatInput = document.getElementById('chatInput');
