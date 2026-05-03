@@ -49,112 +49,67 @@ body {
   pointer-events: none;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 300px;
-  background: #1e293b; /* Matte background */
-  border-right: 1px solid var(--border);
-  padding: 2.5rem 1.5rem;
-
+/* Top Navigation */
+.top-nav-buttons {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 1000;
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-}
-
-.sidebar.collapsed {
-  width: 80px;
-  padding: 2.5rem 0.8rem;
-}
-
-.sidebar-toggle {
-  position: absolute;
-  top: 1rem;
-  right: -15px;
-  width: 30px;
-  height: 30px;
-  background: var(--primary);
-  border-radius: 50%;
-  display: flex;
+  gap: 1.2rem;
+  padding: 0.6rem;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  transition: transform 0.3s ease;
 }
 
-.sidebar-toggle svg {
-  width: 18px;
-  height: 18px;
-  fill: white;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-  transform: rotate(180deg);
-}
-
-
-.brand {
-  font-size: 1.8rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  color: var(--text);
-  margin-bottom: 2rem;
-}
-
-.brand span {
+.brand-mini {
+  font-weight: 800;
   color: var(--primary);
+  margin-right: 0.8rem;
+  padding: 0 0.8rem;
+  font-size: 1.2rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .menu-item {
-  padding: 1.2rem;
-  border-radius: 12px;
+  padding: 0.5rem 0;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   color: var(--text-muted);
   font-weight: 600;
   display: flex;
-  gap: 12px;
   align-items: center;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  position: relative;
+}
+
+.menu-item::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  transition: width 0.3s ease;
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
-  transform: translateX(6px);
+}
+
+.menu-item:hover::after,
+.menu-item.active::after {
+  width: 100%;
 }
 
 .menu-item.active {
-  background: linear-gradient(135deg, var(--primary), #60a5fa);
-  color: white;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  color: var(--primary);
 }
 
-.menu-icon {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  fill: currentColor;
-}
 
-.sidebar.collapsed .menu-item span,
-.sidebar.collapsed .brand span {
-  display: none;
-}
 
-.sidebar.collapsed .brand {
-  justify-content: center;
-  font-size: 1.5rem;
-}
 
-.sidebar.collapsed .menu-item {
-  justify-content: center;
-  padding: 1.2rem 0;
-}
 
 .top-right-settings {
   position: fixed;
@@ -191,10 +146,11 @@ body {
 /* Main content */
 .main-content {
   flex: 1;
-  padding: 3rem 4rem;
+  padding: 6rem 4rem 3rem 4rem; /* Top padding increased for nav bar */
   overflow-y: auto;
   height: 100vh;
 }
+
 
 .section {
   display: none;
@@ -383,6 +339,11 @@ input[type="text"]:focus {
 button.loading .spinner {
   display: inline-block;
 }
+
+button.loading svg {
+  display: none;
+}
+
 
 @keyframes spin {
   to {
@@ -604,7 +565,7 @@ tr:hover td {
   box-shadow: 0 10px 40px rgba(59, 130, 246, 0.2);
 }
 
-#chatInput {
+.input-area input {
   flex: 1;
   background: transparent !important;
   border: none !important;
@@ -617,16 +578,17 @@ tr:hover td {
   font-family: 'Outfit', sans-serif;
 }
 
-#chatInput:focus {
+.input-area input:focus {
   box-shadow: none !important;
   border: none !important;
 }
 
-#chatInput::placeholder {
+.input-area input::placeholder {
   color: var(--text-muted);
 }
 
-#btnSend {
+
+.input-area button:not(.icon-btn) {
   width: 50px;
   height: 50px;
   margin: 0;
@@ -635,14 +597,16 @@ tr:hover td {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-#btnSend svg {
+.input-area button:not(.icon-btn) svg {
   width: 20px;
   height: 20px;
   fill: #ffffff;
   margin-left: 3px;
 }
+
 
 #messagesArea::-webkit-scrollbar {
   width: 8px;
@@ -820,8 +784,22 @@ tr:hover td {
   margin-bottom: 2px;
 }
 
-.mini-metric .value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: white;
-}
+.section {
+  display: none;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.container-narrow {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.section.active {
+    display: block;
+}
+
+#page4.section.active {
+    display: flex;
+    flex-direction: column;
+}
+

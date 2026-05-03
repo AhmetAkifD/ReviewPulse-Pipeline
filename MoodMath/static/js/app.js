@@ -1,18 +1,10 @@
 const menuItems = document.querySelectorAll('.menu-item');
 const sections = document.querySelectorAll('.section');
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
 const btnGoToSettings = document.getElementById('btnGoToSettings');
-
-// Sidebar Toggle
-if (sidebarToggle) {
-    sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
-}
 
 // Settings Button (Top Right)
 if (btnGoToSettings) {
+
     btnGoToSettings.addEventListener('click', () => {
         menuItems.forEach(i => i.classList.remove('active'));
         sections.forEach(s => s.classList.remove('active'));
@@ -50,12 +42,11 @@ const inputApiKey = document.getElementById('inputApiKey');
 const inputWaitTime = document.getElementById('inputWaitTime');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 
-// Model Selection & Balloon Elements
-const btnToggleModelList = document.getElementById('btnToggleModelList');
-const modelDropdown = document.getElementById('modelDropdown');
-const metricsBalloon = document.getElementById('metricsBalloon');
-const btnCloseBalloon = document.getElementById('btnCloseBalloon');
+// Model Selection & Balloon elements (Multi-instance)
+const btnToggles = document.querySelectorAll('.btnToggleModelList');
+const balloonCloseBtns = document.querySelectorAll('.close-balloon');
 const modelOptions = document.querySelectorAll('.model-option');
+
 
 function setLoading(btnId, isLoading) {
 
@@ -316,32 +307,35 @@ if (btnSaveSettings) {
 fetchSettings();
 
 
-// --- MODEL SELECTION & BALLOON LOGIC ---
+// --- MODEL SELECTION & BALLOON LOGIC (Multi-instance) ---
 
 // Dropdown aç/kapat
-if (btnToggleModelList) {
-    btnToggleModelList.addEventListener('click', (e) => {
+btnToggles.forEach(btn => {
+    btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        modelDropdown.classList.toggle('active');
+        const dropdown = btn.nextElementSibling;
+        dropdown.classList.toggle('active');
     });
-}
+});
 
-// Balonu kapat
-if (btnCloseBalloon) {
-    btnCloseBalloon.addEventListener('click', () => {
-        metricsBalloon.classList.remove('visible');
+// Balonları kapat
+balloonCloseBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.closest('.metrics-balloon').classList.remove('visible');
     });
-}
+});
 
 // Model seçimi ve metrikleri göster
 modelOptions.forEach(opt => {
     opt.addEventListener('click', async () => {
-        const modelName = opt.dataset.model;
+        const wrapper = opt.closest('.input-area');
+        const balloon = wrapper.querySelector('.metrics-balloon');
+        const dropdown = opt.closest('.model-dropdown');
         
         // UI güncelle
-        modelOptions.forEach(o => o.classList.remove('active'));
+        dropdown.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        modelDropdown.classList.remove('active');
+        dropdown.classList.remove('active');
 
         // Metrikleri çek ve balonu göster
         try {
@@ -349,33 +343,35 @@ modelOptions.forEach(opt => {
             if (!r.ok) throw new Error("Metrikler alınamadı");
             const data = await r.json();
 
-            document.getElementById('balloonAcc').innerText = `%${(data.accuracy * 100).toFixed(1)}`;
-            
-            // Ortalama değerleri 'macro avg' kısmından alıyoruz
+            balloon.querySelector('.balloonAcc').innerText = `%${(data.accuracy * 100).toFixed(1)}`;
             const macro = data.report['macro avg'];
-            document.getElementById('balloonPrec').innerText = `%${(macro.precision * 100).toFixed(1)}`;
-            document.getElementById('balloonRec').innerText = `%${(macro.recall * 100).toFixed(1)}`;
-            document.getElementById('balloonF1').innerText = `%${(macro['f1-score'] * 100).toFixed(1)}`;
+            balloon.querySelector('.balloonPrec').innerText = `%${(macro.precision * 100).toFixed(1)}`;
+            balloon.querySelector('.balloonRec').innerText = `%${(macro.recall * 100).toFixed(1)}`;
+            balloon.querySelector('.balloonF1').innerText = `%${(macro['f1-score'] * 100).toFixed(1)}`;
 
-            metricsBalloon.classList.add('visible');
+            balloon.classList.add('visible');
         } catch (err) {
             console.error(err);
-            // Hata durumunda sadece balonu göster ama değerleri '-' bırak (veya alert ver)
         }
     });
 });
 
 // Dışarı tıklayınca kapatma
 document.addEventListener('click', (e) => {
-    if (modelDropdown && !modelDropdown.contains(e.target) && e.target !== btnToggleModelList) {
-        modelDropdown.classList.remove('active');
-    }
-    if (metricsBalloon && !metricsBalloon.contains(e.target)) {
-        metricsBalloon.classList.remove('visible');
-    }
+    document.querySelectorAll('.model-dropdown.active').forEach(d => {
+        if (!d.contains(e.target) && !d.previousElementSibling.contains(e.target)) {
+            d.classList.remove('active');
+        }
+    });
+    document.querySelectorAll('.metrics-balloon.visible').forEach(b => {
+        if (!b.contains(e.target)) {
+            b.classList.remove('visible');
+        }
+    });
 });
 
 // --- Page 4: Chat Interface ---
+
 
 const chatContainer = document.getElementById('chatContainer');
 const messagesArea = document.getElementById('messagesArea');

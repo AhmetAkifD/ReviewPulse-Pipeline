@@ -14,46 +14,16 @@
     <div class="glow-circle"></div>
     <div class="glow-circle-2"></div>
 
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-toggle" id="sidebarToggle">
-            <svg viewBox="0 0 24 24">
-                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
-            </svg>
-        </div>
-        <div class="brand">
-            M<span>M</span>
-        </div>
-        <div class="menu-item active" data-target="page1">
-            <svg class="menu-icon" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z">
-                </path>
-            </svg>
-            <span>Veri Boru Hattı</span>
-        </div>
-        <div class="menu-item" data-target="page2">
-            <svg class="menu-icon" viewBox="0 0 24 24">
-                <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"></path>
-            </svg>
-            <span>Model Eğitimi</span>
-        </div>
-        <div class="menu-item" data-target="page3">
-            <svg class="menu-icon" viewBox="0 0 24 24">
-                <path
-                    d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2V9h2v8zm-4 0H8v-4h2v4zm8 0h-2v-6h2v6z">
-                </path>
-            </svg>
-            <span>Canlı Test (XAI)</span>
-        </div>
-        <div class="menu-item" data-target="page4">
-            <svg class="menu-icon" viewBox="0 0 24 24">
-                <path
-                    d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z">
-                </path>
-            </svg>
-            <span>Sistemle Sohbet</span>
-        </div>
+    <!-- Top Navigation Buttons -->
+    <nav class="top-nav-buttons">
+        <div class="brand-mini">MM</div>
+        <div class="menu-item active" data-target="page1">Veri Hattı</div>
+        <div class="menu-item" data-target="page2">Eğitim</div>
+        <div class="menu-item" data-target="page3">Canlı Test</div>
+        <div class="menu-item" data-target="page4">Sohbet</div>
     </nav>
+
+
 
     <!-- Settings Button (Top Right) -->
     <div class="top-right-settings" id="btnGoToSettings" title="Sistem Ayarları">
@@ -69,7 +39,8 @@
     <main class="main-content">
 
         <!-- Page 1: Pipeline -->
-        <section id="page1" class="section active">
+        <section id="page1" class="section active container-narrow">
+
             <h1>Veri Ön İşleme</h1>
             <p class="subtitle">Master veriyi yükleyin ve makine öğrenimi için hazırlayın.</p>
 
@@ -107,7 +78,8 @@
         </section>
 
         <!-- Page 2: Training -->
-        <section id="page2" class="section">
+        <section id="page2" class="section container-narrow">
+
             <h1>Yapay Zeka Model Eğitimi</h1>
             <p class="subtitle">Hiperparametreleri ayarlayın ve modeli eğitin.</p>
 
@@ -144,17 +116,42 @@
         </section>
 
         <!-- Page 3: XAI -->
-        <section id="page3" class="section">
+        <section id="page3" class="section container-narrow">
             <h1>Yapay Zeka Arenası: MoodMath vs Gemini</h1>
             <p class="subtitle">Kendi cümlenizi yazın, hem sizin eğittiğiniz model hem de Google Gemini aynı anda analiz
                 etsin!</p>
 
-            <div class="card">
-                <textarea id="txtPredict"
-                    placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..."></textarea>
-                <button id="btnPredict"><span class="spinner"></span> Karşılaştırmayı Başlat</button>
-                <div class="alert" id="alertP3"></div>
+            <div class="input-area" style="margin-bottom: 2rem;">
+                <div class="model-selector-wrapper">
+                    <button class="icon-btn btnToggleModelList" title="Model Seçimi">
+                        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
+                    </button>
+                    <div class="model-dropdown">
+                        <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
+                    </div>
+                </div>
+                <input type="text" id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..." autocomplete="off">
+                <button id="btnPredict" aria-label="Analiz Et">
+                    <span class="spinner"></span>
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+                
+                <!-- Model Başarım Balonu -->
+                <div class="metrics-balloon">
+                    <button class="close-balloon">&times;</button>
+                    <h4>Model Başarım Değerleri</h4>
+                    <div class="metrics-grid-mini">
+                        <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
+                        <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
+                        <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
+                        <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
+                    </div>
+                </div>
             </div>
+
+
+            <div class="alert" id="alertP3" style="margin-top: -1rem; margin-bottom: 2rem;"></div>
+
 
             <div class="card" id="dashboard3"
                 style="display: none; background: transparent; box-shadow: none; padding: 0;">
@@ -205,10 +202,10 @@
 
                 <div class="input-area">
                     <div class="model-selector-wrapper">
-                        <button id="btnToggleModelList" class="icon-btn" title="Model Seçimi">
+                        <button class="icon-btn btnToggleModelList" title="Model Seçimi">
                             <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
                         </button>
-                        <div id="modelDropdown" class="model-dropdown">
+                        <div class="model-dropdown">
                             <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
                         </div>
                     </div>
@@ -221,29 +218,18 @@
                     </button>
 
                     <!-- Model Başarım Balonu -->
-                    <div id="metricsBalloon" class="metrics-balloon">
-                        <button class="close-balloon" id="btnCloseBalloon">&times;</button>
+                    <div class="metrics-balloon">
+                        <button class="close-balloon">&times;</button>
                         <h4>Model Başarım Değerleri</h4>
                         <div class="metrics-grid-mini">
-                            <div class="mini-metric">
-                                <span class="label">Accuracy</span>
-                                <span class="value" id="balloonAcc">-%</span>
-                            </div>
-                            <div class="mini-metric">
-                                <span class="label">Precision (Avg)</span>
-                                <span class="value" id="balloonPrec">-%</span>
-                            </div>
-                            <div class="mini-metric">
-                                <span class="label">Recall (Avg)</span>
-                                <span class="value" id="balloonRec">-%</span>
-                            </div>
-                            <div class="mini-metric">
-                                <span class="label">F1-Score (Avg)</span>
-                                <span class="value" id="balloonF1">-%</span>
-                            </div>
+                            <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
+                            <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
+                            <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
+                            <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
                         </div>
                     </div>
                 </div>
+
 
 
 
@@ -253,7 +239,8 @@
         </section>
 
         <!-- Page 5: Settings -->
-        <section id="page5" class="section">
+        <section id="page5" class="section container-narrow">
+
 
             <h1>Sistem Ayarları</h1>
             <p class="subtitle">API anahtarlarını ve çalışma parametrelerini yapılandırın.</p>
