@@ -18,7 +18,19 @@ menuItems.forEach(item => {
         item.classList.add('active');
         
         sections.forEach(s => s.classList.remove('active'));
-        document.getElementById(item.dataset.target).classList.add('active');
+        const target = item.dataset.target;
+        document.getElementById(target).classList.add('active');
+
+        // Sidebar Toggle
+        if (target === 'page4') {
+            document.getElementById('chatSidebar').classList.add('visible');
+            document.body.classList.add('sidebar-active');
+            if (chats.length === 0) createNewChat();
+            else renderChatList();
+        } else {
+            document.getElementById('chatSidebar').classList.remove('visible');
+            document.body.classList.remove('sidebar-active');
+        }
     });
 });
 
@@ -358,36 +370,236 @@ modelOptions.forEach(opt => {
 
 // Dışarı tıklayınca kapatma
 document.addEventListener('click', (e) => {
+    // Dropdownlar (Model Seçimi vb.)
     document.querySelectorAll('.model-dropdown.active').forEach(d => {
         if (!d.contains(e.target) && !d.previousElementSibling.contains(e.target)) {
             d.classList.remove('active');
         }
     });
+
+    // Balonlar
     document.querySelectorAll('.metrics-balloon.visible').forEach(b => {
         if (!b.contains(e.target)) {
             b.classList.remove('visible');
         }
     });
+
+    // Chat Action Menu
+    if (chatActionMenu && !chatActionMenu.contains(e.target) && !e.target.closest('.btn-menu')) {
+        chatActionMenu.classList.remove('visible');
+    }
+
+    // Confirmation Modal
+    if (confirmModal && e.target === confirmModal) {
+        closeConfirmModal();
+    }
 });
 
-// --- Page 4: Chat Interface ---
-
+// --- Page 4: Chat Interface (Multiple Chats Logic) ---
 
 const chatContainer = document.getElementById('chatContainer');
 const messagesArea = document.getElementById('messagesArea');
 const chatInput = document.getElementById('chatInput');
 const btnSend = document.getElementById('btnSend');
+const chatList = document.getElementById('chatList');
+const btnNewChat = document.getElementById('btnNewChat');
+const currentChatTitle = document.getElementById('currentChatTitle');
+
+let chats = JSON.parse(localStorage.getItem('moodmath_chats')) || [];
+let currentChatId = localStorage.getItem('moodmath_active_chat_id') || null;
 let isFirstMessage = true;
 
-// Mesaj ekleme fonksiyonu
+function saveChats() {
+    localStorage.setItem('moodmath_chats', JSON.stringify(chats));
+    localStorage.setItem('moodmath_active_chat_id', currentChatId);
+}
+
+function renderChatList() {
+    chatList.innerHTML = '';
+    chats.forEach(chat => {
+        const item = document.createElement('div');
+        item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+        item.setAttribute('data-id', chat.id);
+        item.onclick = (e) => {
+            // Don't switch if clicking the menu button
+            if (e.target.closest('.btn-menu')) return;
+            switchChat(chat.id);
+        };
+
+        item.innerHTML = `
+            <div class="chat-name" title="${chat.name}">${chat.name}</div>
+            <div class="chat-actions">
+                <button class="btn-menu" onclick="event.stopPropagation(); toggleActionMenu(event, '${chat.id}')">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+                </button>
+            </div>
+        `;
+        chatList.appendChild(item);
+    });
+}
+
+function createNewChat() {
+    const id = Date.now().toString();
+    const newChat = {
+        id: id,
+        name: `Sohbet ${chats.length + 1}`,
+        messages: []
+    };
+    chats.unshift(newChat); // Add to beginning
+    currentChatId = id;
+    saveChats();
+    switchChat(id);
+    renderChatList();
+}
+
+function switchChat(id) {
+    currentChatId = id;
+    const chat = chats.find(c => c.id === id);
+    if (!chat) return;
+
+    currentChatTitle.innerText = chat.name;
+    messagesArea.innerHTML = '';
+    
+    if (chat.messages.length > 0) {
+        chatContainer.classList.add('active');
+        isFirstMessage = false;
+        chat.messages.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', msg.sender);
+            msgDiv.innerHTML = msg.text;
+            messagesArea.appendChild(msgDiv);
+        });
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    } else {
+        chatContainer.classList.remove('active');
+        isFirstMessage = true;
+    }
+    
+    saveChats();
+    renderChatList();
+}
+
+function startRename(id) {
+    const chat = chats.find(c => c.id === id);
+    const item = document.querySelector(`.chat-item[data-id="${id}"]`);
+    if (!item) return;
+
+    const nameEl = item.querySelector('.chat-name');
+    const oldName = chat.name;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'chat-name-input';
+    input.value = oldName;
+    
+    input.onblur = () => finishRename(id, input.value);
+    input.onkeypress = (e) => {
+        if (e.key === 'Enter') finishRename(id, input.value);
+    };
+
+    nameEl.innerHTML = '';
+    nameEl.appendChild(input);
+    input.focus();
+    input.select();
+}
+
+function finishRename(id, newName) {
+    const chat = chats.find(c => c.id === id);
+    if (chat && newName.trim()) {
+        chat.name = newName.trim();
+        if (id === currentChatId) currentChatTitle.innerText = chat.name;
+        saveChats();
+        renderChatList();
+    } else {
+        renderChatList();
+    }
+}
+
+let activeChatIdInMenu = null;
+const chatActionMenu = document.getElementById('chatActionMenu');
+const confirmModal = document.getElementById('confirmModal');
+const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+const btnConfirmCancel = document.getElementById('btnConfirmCancel');
+
+function toggleActionMenu(e, id) {
+    activeChatIdInMenu = id;
+    chatActionMenu.classList.add('visible');
+    
+    // Position menu near the button
+    const rect = e.target.closest('.btn-menu').getBoundingClientRect();
+    chatActionMenu.style.top = `${rect.bottom + 5}px`;
+    chatActionMenu.style.left = `${rect.left - 130}px`;
+}
+
+function handleRenameClick() {
+    chatActionMenu.classList.remove('visible');
+    if (activeChatIdInMenu) startRename(activeChatIdInMenu);
+}
+
+function handleDeleteClick() {
+    chatActionMenu.classList.remove('visible');
+    if (activeChatIdInMenu) showConfirmModal(activeChatIdInMenu);
+}
+
+function showConfirmModal(id) {
+    activeChatIdInMenu = id;
+    confirmModal.classList.add('visible');
+}
+
+function closeConfirmModal() {
+    confirmModal.classList.remove('visible');
+    activeChatIdInMenu = null;
+}
+
+function deleteChat(id) {
+    chats = chats.filter(c => c.id !== id);
+    if (currentChatId === id) {
+        currentChatId = chats.length > 0 ? chats[0].id : null;
+    }
+    
+    if (!currentChatId) {
+        createNewChat();
+    } else {
+        switchChat(currentChatId);
+    }
+    
+    saveChats();
+    renderChatList();
+    closeConfirmModal();
+}
+
+btnConfirmDelete.onclick = () => {
+    if (activeChatIdInMenu) deleteChat(activeChatIdInMenu);
+};
+
+btnConfirmCancel.onclick = closeConfirmModal;
+
+if (btnNewChat) {
+    btnNewChat.onclick = createNewChat;
+}
+
+// Attach to window for onclick handlers
+window.toggleActionMenu = toggleActionMenu;
+window.handleRenameClick = handleRenameClick;
+window.handleDeleteClick = handleDeleteClick;
+window.switchChat = switchChat;
+
+
+// Mesaj ekleme fonksiyonu (Sadece UI değil, veriye de ekler)
 function addMessage(text, sender) {
     if (!messagesArea) return;
+    
+    const chat = chats.find(c => c.id === currentChatId);
+    if (chat) {
+        chat.messages.push({ text, sender });
+        saveChats();
+    }
+
     const msgDiv = document.createElement('div');
     msgDiv.classList.add('message', sender);
-    msgDiv.textContent = text;
+    msgDiv.innerHTML = text; // innerHTML for bot replies that might have formatting
     messagesArea.appendChild(msgDiv);
     
-    // Yeni mesaj eklendiğinde en alta kaydır
     setTimeout(() => {
         messagesArea.scrollTop = messagesArea.scrollHeight;
     }, 50);
@@ -417,6 +629,9 @@ async function handleSend() {
     msgDiv.innerHTML = '<span class="spinner" style="display:inline-block; border-color:var(--primary); border-top-color:transparent; width:15px; height:15px; margin-right:8px; vertical-align:middle;"></span> Sistem başlatılıyor...';
     messagesArea.appendChild(msgDiv);
     messagesArea.scrollTop = messagesArea.scrollHeight;
+    
+    // Mesajı veriye de ekleyelim ama bot cevabı bittiğinde asıl cevabı kaydedeceğiz
+    // Geçici olarak "Sistem başlatılıyor..." demiyoruz, placeholder kalsın.
 
     // API çağrısı yap (Streaming)
     try {
@@ -449,6 +664,12 @@ async function handleSend() {
                     } 
                     else if (data.status === "done") {
                         msgDiv.innerHTML = data.reply;
+                        // Bot cevabını kaydet
+                        const chat = chats.find(c => c.id === currentChatId);
+                        if (chat) {
+                            chat.messages.push({ text: data.reply, sender: 'bot' });
+                            saveChats();
+                        }
                     }
                     else if (data.status === "error") {
                         msgDiv.innerHTML = `<span style="color:var(--error);">Hata: ${data.message}</span>`;
@@ -476,4 +697,20 @@ if (chatInput) {
             handleSend();
         }
     });
-}
+}
+
+// --- Initialization on Load ---
+document.addEventListener('DOMContentLoaded', () => {
+    fetchSettings();
+    
+    const activeSection = document.querySelector('.section.active');
+    if (activeSection && activeSection.id === 'page4') {
+        document.getElementById('chatSidebar').classList.add('visible');
+        document.body.classList.add('sidebar-active');
+        if (chats.length === 0) createNewChat();
+        else renderChatList();
+        
+        if (currentChatId) switchChat(currentChatId);
+        else if (chats.length > 0) switchChat(chats[0].id);
+    }
+});

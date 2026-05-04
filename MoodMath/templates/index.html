@@ -35,6 +35,20 @@
     </div>
 
 
+
+    <!-- Chat Sidebar (Floating on the left) -->
+    <div class="chat-sidebar" id="chatSidebar">
+        <button class="btn-new-chat" id="btnNewChat">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+            Yeni Sohbet
+        </button>
+        <div class="chat-list-container">
+            <div id="chatList" class="chat-list">
+                <!-- Chat items will be injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="main-content">
 
@@ -188,52 +202,42 @@
 
         <!-- Page 4: Chat Interface -->
         <section id="page4" class="section">
-            <h1 style="text-align: center; margin-bottom: 0;">Sistemle Sohbet</h1>
-            <p class="subtitle" style="text-align: center; margin-bottom: 1rem;">Yapay zeka asistanı ile etkileşime
-                geçin.</p>
+            <div class="chat-page-header">
+                <h1 id="currentChatTitle">Sistemle Sohbet</h1>
+                <p class="subtitle">Yapay zeka asistanı ile etkileşime geçin.</p>
+            </div>
 
             <div id="chatContainer">
-                <!-- Input'u ortalamak için üst boşluk -->
                 <div id="topSpacer"></div>
-
-                <div id="messagesArea">
-                    <!-- Mesajlar buraya eklenecek -->
-                </div>
-
-                <div class="input-area">
-                    <div class="model-selector-wrapper">
-                        <button class="icon-btn btnToggleModelList" title="Model Seçimi">
-                            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
+                <div id="messagesArea"></div>
+                
+                <div class="chat-input-wrapper">
+                    <div class="input-area">
+                        <div class="model-selector-wrapper">
+                            <button class="icon-btn btnToggleModelList" title="Model Seçimi">
+                                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
+                            </button>
+                            <div class="model-dropdown">
+                                <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
+                            </div>
+                        </div>
+                        <input type="text" id="chatInput" placeholder="Sistemle konuşmak için bir şeyler yazın..." autocomplete="off">
+                        <button id="btnSend" aria-label="Gönder">
+                            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
                         </button>
-                        <div class="model-dropdown">
-                            <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
-                        </div>
-                    </div>
-                    <input type="text" id="chatInput" placeholder="Sistemle konuşmak için bir şeyler yazın..."
-                        autocomplete="off">
-                    <button id="btnSend" aria-label="Gönder">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                        </svg>
-                    </button>
 
-                    <!-- Model Başarım Balonu -->
-                    <div class="metrics-balloon">
-                        <button class="close-balloon">&times;</button>
-                        <h4>Model Başarım Değerleri</h4>
-                        <div class="metrics-grid-mini">
-                            <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
-                            <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
-                            <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
-                            <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
+                        <div class="metrics-balloon">
+                            <button class="close-balloon">&times;</button>
+                            <h4>Model Başarım Değerleri</h4>
+                            <div class="metrics-grid-mini">
+                                <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
+                                <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
+                                <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
+                                <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-
-
-
-                <!-- Input'u ortalamak için alt boşluk -->
                 <div id="bottomSpacer"></div>
             </div>
         </section>
@@ -276,6 +280,25 @@
 
 
     </main>
+
+
+    <!-- Custom Action Menu (Popup) -->
+    <div id="chatActionMenu" class="action-menu">
+        <button onclick="handleRenameClick()"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg> İsmi Değiştir</button>
+        <button onclick="handleDeleteClick()" class="delete"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg> Sohbeti Sil</button>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Sohbeti Sil</h3>
+            <p>Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnConfirmCancel">Vazgeç</button>
+                <button class="btn-confirm" id="btnConfirmDelete">Sil</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/app.js?v=3"></script>
 </body>
