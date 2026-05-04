@@ -933,27 +933,16 @@ tr:hover td {
   opacity: 1;
 }
 
-.btn-menu {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
 .btn-menu svg {
   width: 20px;
   height: 20px;
-  fill: currentColor;
+  min-width: 20px;
+  flex-shrink: 0;
+  fill: currentColor !important;
   pointer-events: none;
-  /* Prevents e.target from being the SVG inside the button */
 }
+
+
 
 .btn-menu:hover {
   background: rgba(255, 255, 255, 0.1);
