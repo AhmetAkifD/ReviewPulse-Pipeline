@@ -942,7 +942,13 @@ tr:hover td {
   pointer-events: none;
 }
 
-
+.btn-menu svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  pointer-events: none;
+  /* Prevents e.target from being the SVG inside the button */
+}
 
 .btn-menu:hover {
   background: rgba(255, 255, 255, 0.1);
