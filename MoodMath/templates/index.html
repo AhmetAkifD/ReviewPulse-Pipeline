@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,25 +9,52 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
     <div class="glow-circle"></div>
     <div class="glow-circle-2"></div>
 
-    <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="brand">
-            MoodMath
-        </div>
-        <div class="menu-item active" data-target="page1">Veri Boru Hattı</div>
-        <div class="menu-item" data-target="page2">Model Eğitimi</div>
-        <div class="menu-item" data-target="page3">Canlı Test (XAI)</div>
+    <!-- Top Navigation Buttons -->
+    <nav class="top-nav-buttons">
+        <div class="brand-mini">MM</div>
+        <div class="menu-item active" data-target="page1">Veri Hattı</div>
+        <div class="menu-item" data-target="page2">Eğitim</div>
+        <div class="menu-item" data-target="page3">Canlı Test</div>
+        <div class="menu-item" data-target="page4">Sohbet</div>
     </nav>
+
+
+
+    <!-- Settings Button (Top Right) -->
+    <div class="top-right-settings" id="btnGoToSettings" title="Sistem Ayarları">
+        <svg viewBox="0 0 24 24">
+            <path
+                d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.84,9.48l2.03,1.58C4.82,11.36,4.8,11.68,4.8,12c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z">
+            </path>
+        </svg>
+    </div>
+
+
+
+    <!-- Chat Sidebar (Floating on the left) -->
+    <div class="chat-sidebar" id="chatSidebar">
+        <button class="btn-new-chat" id="btnNewChat">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+            Yeni Sohbet
+        </button>
+        <div class="chat-list-container">
+            <div id="chatList" class="chat-list">
+                <!-- Chat items will be injected here -->
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content">
 
         <!-- Page 1: Pipeline -->
-        <section id="page1" class="section active">
+        <section id="page1" class="section active container-narrow">
+
             <h1>Veri Ön İşleme</h1>
             <p class="subtitle">Master veriyi yükleyin ve makine öğrenimi için hazırlayın.</p>
 
@@ -64,7 +92,8 @@
         </section>
 
         <!-- Page 2: Training -->
-        <section id="page2" class="section">
+        <section id="page2" class="section container-narrow">
+
             <h1>Yapay Zeka Model Eğitimi</h1>
             <p class="subtitle">Hiperparametreleri ayarlayın ve modeli eğitin.</p>
 
@@ -86,11 +115,13 @@
 
                 <h3>Bilimsel Detaylı Metrikler</h3>
                 <div class="flex-row">
-                    <div class="col card" style="box-shadow: none; border-color: var(--success); background: rgba(16,185,129,0.05)">
+                    <div class="col card"
+                        style="box-shadow: none; border-color: var(--success); background: rgba(16,185,129,0.05)">
                         <h4 style="color: var(--success); margin-bottom: 1rem;">Pozitif Sınıf (1)</h4>
                         <div id="posMetrics"></div>
                     </div>
-                    <div class="col card" style="box-shadow: none; border-color: var(--error); background: rgba(239,68,68,0.05)">
+                    <div class="col card"
+                        style="box-shadow: none; border-color: var(--error); background: rgba(239,68,68,0.05)">
                         <h4 style="color: var(--error); margin-bottom: 1rem;">Negatif Sınıf (0)</h4>
                         <div id="negMetrics"></div>
                     </div>
@@ -99,23 +130,54 @@
         </section>
 
         <!-- Page 3: XAI -->
-        <section id="page3" class="section">
+        <section id="page3" class="section container-narrow">
             <h1>Yapay Zeka Arenası: MoodMath vs Gemini</h1>
-            <p class="subtitle">Kendi cümlenizi yazın, hem sizin eğittiğiniz model hem de Google Gemini aynı anda analiz etsin!</p>
+            <p class="subtitle">Kendi cümlenizi yazın, hem sizin eğittiğiniz model hem de Google Gemini aynı anda analiz
+                etsin!</p>
 
-            <div class="card">
-                <textarea id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..."></textarea>
-                <button id="btnPredict"><span class="spinner"></span> Karşılaştırmayı Başlat</button>
-                <div class="alert" id="alertP3"></div>
+            <div class="input-area" style="margin-bottom: 2rem;">
+                <div class="model-selector-wrapper">
+                    <button class="icon-btn btnToggleModelList" title="Model Seçimi">
+                        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
+                    </button>
+                    <div class="model-dropdown">
+                        <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
+                    </div>
+                </div>
+                <input type="text" id="txtPredict" placeholder="Örn: Kargo çok hızlıydı ama ürün kutusu yırtık geldi, hiç beğenmedim..." autocomplete="off">
+                <button id="btnPredict" aria-label="Analiz Et">
+                    <span class="spinner"></span>
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+                
+                <!-- Model Başarım Balonu -->
+                <div class="metrics-balloon">
+                    <button class="close-balloon">&times;</button>
+                    <h4>Model Başarım Değerleri</h4>
+                    <div class="metrics-grid-mini">
+                        <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
+                        <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
+                        <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
+                        <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card" id="dashboard3" style="display: none; background: transparent; box-shadow: none; padding: 0;">
+
+            <div class="alert" id="alertP3" style="margin-top: -1rem; margin-bottom: 2rem;"></div>
+
+
+            <div class="card" id="dashboard3"
+                style="display: none; background: transparent; box-shadow: none; padding: 0;">
                 <div class="flex-row">
                     <div class="col card" style="border-top: 4px solid var(--primary);">
                         <h3 style="text-align: center; color: var(--primary);">MoodMath (Yerel)</h3>
-                        <div class="metric-box" id="predBox" style="background: var(--card-bg); border-color: var(--primary); margin-top: 1rem;">
-                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu Yoğunluğu</div>
-                            <div class="metric-value" id="predScore" style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
+                        <div class="metric-box" id="predBox"
+                            style="background: var(--card-bg); border-color: var(--primary); margin-top: 1rem;">
+                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu
+                                Yoğunluğu</div>
+                            <div class="metric-value" id="predScore"
+                                style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
                         </div>
                         <h4 style="margin-top: 1.5rem; color: var(--text-muted);">Dikkat Edilen Kelimeler:</h4>
                         <div id="predWords" style="margin-top: 0.5rem;"></div>
@@ -123,19 +185,122 @@
 
                     <div class="col card" style="border-top: 4px solid #a855f7;">
                         <h3 style="text-align: center; color: #a855f7;">Google Gemini (LLM)</h3>
-                        <div class="metric-box" id="geminiScoreBox" style="background: var(--card-bg); border-color: #a855f7; margin-top: 1rem; display: none;">
-                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu Yoğunluğu</div>
-                            <div class="metric-value" id="geminiScore" style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
+                        <div class="metric-box" id="geminiScoreBox"
+                            style="background: var(--card-bg); border-color: #a855f7; margin-top: 1rem; display: none;">
+                            <div class="metric-label" style="text-align: center; color: var(--text-muted);">Duygu
+                                Yoğunluğu</div>
+                            <div class="metric-value" id="geminiScore"
+                                style="text-align: center; font-size: 2rem; margin-top: 0.5rem;"></div>
                         </div>
-                        <div id="geminiResult" style="margin-top: 1rem; line-height: 1.6; font-size: 1.1rem; padding: 1.5rem; background: rgba(168, 85, 247, 0.05); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                        <div id="geminiResult"
+                            style="margin-top: 1rem; line-height: 1.6; font-size: 1.1rem; padding: 1.5rem; background: rgba(168, 85, 247, 0.05); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- Page 4: Chat Interface -->
+        <section id="page4" class="section">
+            <div class="chat-page-header">
+                <h1 id="currentChatTitle">Sistemle Sohbet</h1>
+                <p class="subtitle">Yapay zeka asistanı ile etkileşime geçin.</p>
+            </div>
+
+            <div id="chatContainer">
+                <div id="topSpacer"></div>
+                <div id="messagesArea"></div>
+                
+                <div class="chat-input-wrapper">
+                    <div class="input-area">
+                        <div class="model-selector-wrapper">
+                            <button class="icon-btn btnToggleModelList" title="Model Seçimi">
+                                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"></path></svg>
+                            </button>
+                            <div class="model-dropdown">
+                                <div class="model-option active" data-model="mood_model">MoodMath v1 (Logistic)</div>
+                            </div>
+                        </div>
+                        <input type="text" id="chatInput" placeholder="Sistemle konuşmak için bir şeyler yazın..." autocomplete="off">
+                        <button id="btnSend" aria-label="Gönder">
+                            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                        </button>
+
+                        <div class="metrics-balloon">
+                            <button class="close-balloon">&times;</button>
+                            <h4>Model Başarım Değerleri</h4>
+                            <div class="metrics-grid-mini">
+                                <div class="mini-metric"><span class="label">Accuracy</span><span class="value balloonAcc">-%</span></div>
+                                <div class="mini-metric"><span class="label">Precision (Avg)</span><span class="value balloonPrec">-%</span></div>
+                                <div class="mini-metric"><span class="label">Recall (Avg)</span><span class="value balloonRec">-%</span></div>
+                                <div class="mini-metric"><span class="label">F1-Score (Avg)</span><span class="value balloonF1">-%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="bottomSpacer"></div>
+            </div>
+        </section>
+
+        <!-- Page 5: Settings -->
+        <section id="page5" class="section container-narrow">
+
+
+            <h1>Sistem Ayarları</h1>
+            <p class="subtitle">API anahtarlarını ve çalışma parametrelerini yapılandırın.</p>
+
+            <div class="card">
+                <h3>Genel Ayarlar</h3>
+
+                <div class="col" style="margin-bottom: 1.5rem;">
+                    <label for="inputApiKey"
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Gemini API Key</label>
+                    <input type="text" id="inputApiKey" placeholder="AIzaSy..."
+                        style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;">
+                </div>
+
+                <div class="col" style="margin-bottom: 2rem;">
+                    <label for="inputWaitTime"
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Scraper Bekleme Süresi
+                        (Saniye)</label>
+                    <input type="number" id="inputWaitTime" step="0.5" placeholder="10.5"
+                        style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: white;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Hepsiburada üzerinde
+                        her bir yıldız filtresine tıklandıktan sonra yorumların yüklenmesi için beklenecek süre.</p>
+                </div>
+
+                <div class="flex-row" style="justify-content: flex-start;">
+                    <button id="btnSaveSettings" style="width: auto; padding: 12px 30px; margin: 0;"><span
+                            class="spinner"></span> Ayarları Kaydet</button>
+                </div>
+
+                <div class="alert" id="alertP5"></div>
+            </div>
+        </section>
+
+
     </main>
+
+
+    <!-- Custom Action Menu (Popup) -->
+    <div id="chatActionMenu" class="action-menu">
+        <button onclick="handleRenameClick()"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg> İsmi Değiştir</button>
+        <button onclick="handleDeleteClick()" class="delete"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg> Sohbeti Sil</button>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Sohbeti Sil</h3>
+            <p>Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnConfirmCancel">Vazgeç</button>
+                <button class="btn-confirm" id="btnConfirmDelete">Sil</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/app.js?v=3"></script>
 </body>
+
 </html>

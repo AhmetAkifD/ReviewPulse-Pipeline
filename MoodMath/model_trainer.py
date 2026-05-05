@@ -5,6 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import os
+import json
 
 
 def run_training(max_features=5000, test_size=0.2):
@@ -20,12 +21,11 @@ def run_training(max_features=5000, test_size=0.2):
     Y = df['Sentiment']
 
     # 1. Slider'dan gelen 'max_features' değerine göre vektörize ediyoruz
-    # YENİ: Modelin sadece gerçekten ayırt edici ve en az 3 farklı yorumda geçen kelimeleri öğrenmesini sağlıyoruz
     vectorizer = TfidfVectorizer(
         max_features=max_features,
         ngram_range=(1, 2),
-        min_df=3,  # Alt Limit: En az 3 farklı yorumda geçmeyen kelimeleri (yazım hataları, özel isimler) sil
-        max_df=0.85  # Üst Limit: Yorumların %85'inde geçen (aşırı yaygın) kelimeleri sil
+        min_df=3,
+        max_df=0.85
     )
     X_vectorized = vectorizer.fit_transform(X)
 
@@ -46,11 +46,15 @@ def run_training(max_features=5000, test_size=0.2):
         "report": report
     }
 
-    # 5. MODELİ KAYDETME (Web arayüzü buradan okuyacak)
+    # 5. MODELİ KAYDETME
     if not os.path.exists("Model"):
         os.makedirs("Model")
 
     joblib.dump(model, "Model/mood_model.pkl")
     joblib.dump(vectorizer, "Model/mood_vectorizer.pkl")
+    
+    # Metrikleri JSON olarak kaydet
+    with open("Model/metrics.json", "w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=4)
 
-    return metrics, df
+    return metrics, df

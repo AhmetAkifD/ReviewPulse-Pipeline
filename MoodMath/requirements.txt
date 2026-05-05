@@ -11,3 +11,5 @@ numpy<2
 google-generativeai
 
 protobuf
+selenium
+webdriver-manager
