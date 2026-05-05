@@ -157,6 +157,17 @@ body.sidebar-active .main-content {
   padding-left: 320px;
 }
 
+body.chat-mode, body.chat-mode html {
+  overflow: hidden !important;
+}
+
+body.chat-mode .main-content {
+  overflow: hidden !important;
+  padding-top: 5rem;
+  padding-bottom: 0;
+  height: 100vh;
+}
+
 
 .section {
   display: none;
@@ -464,14 +475,26 @@ tr:hover td {
 
 /* --- CHAT INTERFACE (PAGE 4) STYLES --- */
 
+#page4.section.active {
+  display: flex !important;
+  flex-direction: column;
+  height: calc(100vh - 6rem); /* Adjusting for padding-top 5rem and some breathing room */
+  margin: 0;
+}
+
+.chat-page-header {
+  flex-shrink: 0;
+}
+
 #chatContainer {
+  flex: 1;
   width: 100%;
   max-width: 900px;
-  height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
   position: relative;
   margin: 0 auto;
+  overflow: hidden; /* Prevent container from scrolling, we want messagesArea to scroll */
 }
 
 #topSpacer,
@@ -495,11 +518,13 @@ tr:hover td {
 #chatContainer.active #topSpacer {
   flex: 0;
   height: 0;
+  display: none;
 }
 
 #chatContainer.active #bottomSpacer {
   flex: 0;
   height: 0;
+  display: none;
 }
 
 #chatContainer.active #messagesArea {
@@ -510,15 +535,13 @@ tr:hover td {
 }
 
 #chatContainer.active {
-  height: calc(100vh - 4rem);
-  /* To hit the bottom more directly */
-  margin-bottom: -2rem;
+  /* margin-bottom removal to keep it clean */
 }
 
-#page4.section.active {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.chat-input-wrapper {
+  flex-shrink: 0;
+  padding: 20px 0 10px 0;
+  width: 100%;
 }
 
 

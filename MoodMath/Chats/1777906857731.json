@@ -1,0 +1,34 @@
+[
+    {
+        "role": "user",
+        "content": "Bu ürünü inceler misin? https://www.hepsiburada.com/mabbels-yuzuklerin-efendisi-yuzuk-kardesligi-koleksiyon-defteri-yesil-16-5x23-cm-ozel-tasarim-kapak-p-HBCV00002BQQ2Y"
+    },
+    {
+        "role": "bot",
+        "content": "<strong style=\"color: var(--primary);\">Mabbels Yüzüklerin Efendisi Yüzük Kardeşliği Koleksiyon Defteri Yeşil 16.5x23 cm Özel Tasarım Kapak</strong><br>\n                    <strong style=\"color: var(--success);\">MoodMath Duygu Skoru: %65.1 Pozitif</strong> \n                    <span style=\"font-size: 0.8rem; color: var(--text-muted);\">(Model Başarımı: %87.3)</span><br><br>\n                    MoodMath yerel modelimizin %87.3'lük başarı oranıyla yaptığı analize göre, 'Mabbels Yüzüklerin Efendisi Koleksiyon Defteri'ne yönelik kullanıcı geri bildirimleri %65.1 oranında güçlü bir pozitif duygu yoğunluğu taşımaktadır. Tüketiciler ürünü genel olarak 'mükemmel,' 'güzel' ve 'iyi' olarak değerlendirip beğenilerini dile getirirken, 'küçük' boyut algısı veya 'ancak' ile belirtilen belirli beklenti farklılıkları gibi noktaların da geri bildirimlerde yer aldığı gözlemlenmektedir. Genel itibarıyla, ürünün beklentileri karşıladığı ve yüksek memnuniyet sunduğu anlaşılmaktadır."
+    },
+    {
+        "role": "user",
+        "content": "Ürünü tavsiye eder misin?"
+    },
+    {
+        "role": "bot",
+        "content": "Evet, ürünü genel memnuniyet ve güçlü pozitif duygu skoru nedeniyle tavsiye ederim."
+    },
+    {
+        "role": "user",
+        "content": "Tavsiye ettiğin ürünün adını öğrenebilir miyim?"
+    },
+    {
+        "role": "bot",
+        "content": "Evet, tavsiye ettiğim ürün **Mabbels Yüzüklerin Efendisi Yüzük Kardeşliği Koleksiyon Defteri Yeşil 16.5x23 cm Özel Tasarım Kapak**."
+    },
+    {
+        "role": "user",
+        "content": "Ürünün amacı tam olarak nedir?"
+    },
+    {
+        "role": "bot",
+        "content": "Ürünün amacı, Yüzüklerin Efendisi serisinin hayranları için tasarlanmış özel bir defter olarak, koleksiyonlarını düzenlemelerini, temalı notlar almalarını veya anılarını biriktirmelerini sağlamaktır."
+    }
+]

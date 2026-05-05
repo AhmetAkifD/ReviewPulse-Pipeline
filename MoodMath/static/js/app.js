@@ -21,15 +21,17 @@ menuItems.forEach(item => {
         const target = item.dataset.target;
         document.getElementById(target).classList.add('active');
 
-        // Sidebar Toggle
+        // Sidebar & Chat Mode Toggle
         if (target === 'page4') {
             document.getElementById('chatSidebar').classList.add('visible');
             document.body.classList.add('sidebar-active');
+            document.body.classList.add('chat-mode');
             if (chats.length === 0) createNewChat();
             else renderChatList();
         } else {
             document.getElementById('chatSidebar').classList.remove('visible');
             document.body.classList.remove('sidebar-active');
+            document.body.classList.remove('chat-mode');
         }
     });
 });
@@ -640,7 +642,7 @@ async function handleSend() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({ message: text, chat_id: currentChatId })
         });
         
         if (!response.body) throw new Error("Tarayıcı streaming desteklemiyor.");
@@ -707,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeSection && activeSection.id === 'page4') {
         document.getElementById('chatSidebar').classList.add('visible');
         document.body.classList.add('sidebar-active');
+        document.body.classList.add('chat-mode');
         if (chats.length === 0) createNewChat();
         else renderChatList();
         
