@@ -27,8 +27,14 @@ def load_config():
     # Önce varsayılanları belirle
     config_data = {
         "gemini_api_key": "",
-        "scraper_wait_time": 10.5
+        "scraper_wait_time": 10.5,
+        "count_5_star": 3,
+        "count_4_star": 3,
+        "count_3_star": 3,
+        "count_2_star": 3,
+        "count_1_star": 3
     }
+
     
     # config.json oku
     if os.path.exists(CONFIG_FILE):
@@ -278,8 +284,16 @@ async def chat_endpoint(req: ChatRequest):
                         
                     # Web Scraping
                     current_config = load_config()
-                    scrape_result = scraper.scrape_reviews(url, progress_callback, wait_time=current_config["scraper_wait_time"])
+                    review_counts = {
+                        5: current_config.get("count_5_star", 3),
+                        4: current_config.get("count_4_star", 3),
+                        3: current_config.get("count_3_star", 3),
+                        2: current_config.get("count_2_star", 3),
+                        1: current_config.get("count_1_star", 3)
+                    }
+                    scrape_result = scraper.scrape_reviews(url, progress_callback, wait_time=current_config["scraper_wait_time"], review_counts=review_counts)
                     product_name = scrape_result["product_name"]
+
 
                     reviews = scrape_result["reviews"]
                     
@@ -320,7 +334,9 @@ async def chat_endpoint(req: ChatRequest):
                     # Gemini İstediği
                     progress_callback("Analiz sonuçları uzman Gemini'ye gönderiliyor...")
                     
-                    prompt = f"""Sen ürün yorumlarını inceleyen ve ürün hakkındaki düşüncüleri analiz eden bir uzmansın. Vereceğim verileri inceleyip birkaç cümlelik, profesyonel bir geri dönüş yap.
+                    prompt = f"""Sen ürün yorumlarını inceleyen ve ürün hakkındaki düşüncüleri analiz eden bir uzmansın. Vereceğim verileri inceleyip birkaç cümlelik, profesyonel bir geri dönüş yap. 
+                    Örnek olarak 'Bu ürünü sevdim' ve 'Bu ürün şahane' ifadelerinin aynı derecede pozitif olmadığını unutma. Aynı şekilde 'Bu ürünü sevmedim' ve 'Bu ürün iğrenç' ifadelerinin de aynı derecede negatif olmadığını unutma. Yorumlardaki ifadeleri bu durumlara göre değerlendir ve ona göre bir geri dönüş yap.
+                    Bir miktar pozitif olmayı unutma. Ürün ile alakası olmayan, kargolama sorunları ile alakalı olan cümleleri yok say. Ürün ile alakalı olumlu olan şeylere de pozitif yaklaş.
 Analizi yaparken MoodMath yerel modelinin sonuçlarını baz al. Bu modelin genel başarı oranı (Accuracy): {model_accuracy}.
 
 Kullanıcı senden şunu istiyor: {message}
@@ -390,6 +406,12 @@ Kullanıcıya profesyonel bir dönüş yap. Dönüşlerini kısa tut. Yanıtlar�
 class SettingsRequest(BaseModel):
     gemini_api_key: str
     scraper_wait_time: float
+    count_5_star: int
+    count_4_star: int
+    count_3_star: int
+    count_2_star: int
+    count_1_star: int
+
 
 @app.get("/api/settings")
 async def get_settings():
@@ -399,9 +421,15 @@ async def get_settings():
 async def update_settings(req: SettingsRequest):
     new_config = {
         "gemini_api_key": req.gemini_api_key,
-        "scraper_wait_time": req.scraper_wait_time
+        "scraper_wait_time": req.scraper_wait_time,
+        "count_5_star": req.count_5_star,
+        "count_4_star": req.count_4_star,
+        "count_3_star": req.count_3_star,
+        "count_2_star": req.count_2_star,
+        "count_1_star": req.count_1_star
     }
     save_config(new_config)
+
     
     # Gemini'yi yeniden yapılandır
     genai.configure(api_key=new_config["gemini_api_key"])

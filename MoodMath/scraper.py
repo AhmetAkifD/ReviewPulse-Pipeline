@@ -8,7 +8,10 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import urllib.parse
 
-def scrape_reviews(url, progress_callback, wait_time=10.5):
+def scrape_reviews(url, progress_callback, wait_time=10.5, review_counts=None):
+    if review_counts is None:
+        review_counts = {5:3, 4:3, 3:3, 2:3, 1:3}
+        
     # Link düzenleme
     parsed = urllib.parse.urlparse(url)
     if not parsed.path.endswith("-yorumlari"):
@@ -45,7 +48,7 @@ def scrape_reviews(url, progress_callback, wait_time=10.5):
 
         # Filtreleri bekle
         filters = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, "//*[@class='hermes-RateBox-module-wUSygDPCtThyMtSVappE hermes-RateBox-module-tEIJ6uc8H8YEp4UMCptW']"))
+            EC.presence_of_all_elements_located((By.XPATH, "//*[contains(@class, 'hermes-RateBox-module-wUSygDPCtThyMtSVappE')]"))
         )
         
         if len(filters) < 5:
@@ -56,10 +59,15 @@ def scrape_reviews(url, progress_callback, wait_time=10.5):
         # filters 0'dan 4'e kadar (5 yıldızdan 1 yıldıza)
         for i in range(min(5, len(filters))):
             star_level = 5 - i
-            progress_callback(f"{star_level} yıldızlı yorumlar çekiliyor...")
+            
+            target_count = review_counts.get(star_level, 0)
+            if target_count <= 0:
+                continue
+                
+            progress_callback(f"{star_level} yıldızlı yorumlar çekiliyor... (Hedef: {target_count})")
             
             # Filtreleri yeniden bulmak güvenlidir (DOM değişebilir)
-            current_filters = driver.find_elements(By.XPATH, "//*[@class='hermes-RateBox-module-wUSygDPCtThyMtSVappE hermes-RateBox-module-tEIJ6uc8H8YEp4UMCptW']")
+            current_filters = driver.find_elements(By.XPATH, "//*[contains(@class, 'hermes-RateBox-module-wUSygDPCtThyMtSVappE')]")
             if i < len(current_filters):
                 # Tıkla ve bekle
                 try:
@@ -71,7 +79,7 @@ def scrape_reviews(url, progress_callback, wait_time=10.5):
                     
                     added = 0
                     for card in review_cards:
-                        if added >= 3:
+                        if added >= target_count:
                             break
                         rev_text = card.text.strip()
                         if rev_text:
@@ -79,11 +87,12 @@ def scrape_reviews(url, progress_callback, wait_time=10.5):
                             added += 1
                             
                     # Filtreyi geri kaldır
-                    current_filters = driver.find_elements(By.XPATH, "//*[@class='hermes-RateBox-module-wUSygDPCtThyMtSVappE hermes-RateBox-module-tEIJ6uc8H8YEp4UMCptW']")
+                    current_filters = driver.find_elements(By.XPATH, "//*[contains(@class, 'hermes-RateBox-module-wUSygDPCtThyMtSVappE')]")
                     driver.execute_script("arguments[0].click();", current_filters[i])
                     time.sleep(2)
                 except Exception as inner_e:
                     progress_callback(f"{star_level} yıldızlı yorumlarda hata: {str(inner_e)[:30]}")
+
                     
         progress_callback(f"Toplam {len(all_reviews)} yorum başarıyla çekildi.")
         
