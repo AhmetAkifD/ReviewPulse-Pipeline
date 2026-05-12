@@ -54,7 +54,13 @@ const alertP5 = document.getElementById('alertP5');
 // Settings Elements
 const inputApiKey = document.getElementById('inputApiKey');
 const inputWaitTime = document.getElementById('inputWaitTime');
+const input5Star = document.getElementById('input5Star');
+const input4Star = document.getElementById('input4Star');
+const input3Star = document.getElementById('input3Star');
+const input2Star = document.getElementById('input2Star');
+const input1Star = document.getElementById('input1Star');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
+
 
 // Model Selection & Balloon elements (Multi-instance)
 const btnToggles = document.querySelectorAll('.btnToggleModelList');
@@ -277,6 +283,11 @@ async function fetchSettings() {
         const data = await response.json();
         if (inputApiKey) inputApiKey.value = data.gemini_api_key;
         if (inputWaitTime) inputWaitTime.value = data.scraper_wait_time;
+        if (input5Star && data.count_5_star !== undefined) input5Star.value = data.count_5_star;
+        if (input4Star && data.count_4_star !== undefined) input4Star.value = data.count_4_star;
+        if (input3Star && data.count_3_star !== undefined) input3Star.value = data.count_3_star;
+        if (input2Star && data.count_2_star !== undefined) input2Star.value = data.count_2_star;
+        if (input1Star && data.count_1_star !== undefined) input1Star.value = data.count_1_star;
     } catch (err) {
         console.error("Ayarlar yüklenemedi:", err);
     }
@@ -300,9 +311,15 @@ if (btnSaveSettings) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     gemini_api_key: apiKey,
-                    scraper_wait_time: waitTime
+                    scraper_wait_time: waitTime,
+                    count_5_star: parseInt(input5Star.value) || 0,
+                    count_4_star: parseInt(input4Star.value) || 0,
+                    count_3_star: parseInt(input3Star.value) || 0,
+                    count_2_star: parseInt(input2Star.value) || 0,
+                    count_1_star: parseInt(input1Star.value) || 0
                 })
             });
+
             const data = await response.json();
             if (response.ok) {
                 showAlert('alertP5', 'success', data.message);

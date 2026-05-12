@@ -1,3 +1,8 @@
 {
-    "scraper_wait_time": 10.0
+    "scraper_wait_time": 8.0,
+    "count_5_star": 6,
+    "count_4_star": 6,
+    "count_3_star": 4,
+    "count_2_star": 4,
+    "count_1_star": 4
 }
